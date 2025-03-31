@@ -1,7 +1,9 @@
 import argparse
 import time
+
 from loguru import logger
-from crawlers_manager import CrawlesManager
+
+from broken_links_crawler import BrokenLinksCrawler
 
 
 def parse_arguments():
@@ -26,20 +28,17 @@ def parse_arguments():
 if __name__ == "__main__":
     arguments = parse_arguments()
 
-# target_urls = ["https://webee.technion.ac.il/~ayellet/",
-#                "https://cgm.technion.ac.il/",
-#                "https://ece.technion.ac.il/"]
+    # target_urls = ["https://webee.technion.ac.il/~ayellet/",
+    #                "https://cgm.technion.ac.il/",
+    #                "https://ece.technion.ac.il/"]
 
-    arguments.url = "https://webee.technion.ac.il/~ayellet/"
-    arguments.threads = 5
-    arguments.depth = 5
-
+    arguments.url = "https://ece.technion.ac.il/"
+    arguments.threads = 50
+    arguments.depth = 3
 
     start_time = time.time()
 
-    cm = CrawlesManager(target_url=arguments.url, workers_num=arguments.threads, depth=arguments.depth)
-    cm.run()
+    blc = BrokenLinksCrawler(target_url=arguments.url, workers_num=arguments.threads, depth=arguments.depth)
+    blc.start()
 
     logger.info(f' it took {(time.time() - start_time):.2f}')
-
-
