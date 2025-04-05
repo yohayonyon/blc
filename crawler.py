@@ -4,6 +4,7 @@ from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from link import Link, LinkStatus
+from processor import Processor
 
 
 def retry_if_not_404(exception):
@@ -13,33 +14,24 @@ def retry_if_not_404(exception):
     )
 
 
-class Crawler:
-    def __init__(self, target_url, crawler_id, url_queue, broken_links, url_queue_full_event, session, max_depth):
+class Crawler(Processor):
+    def __init__(self, target_url, broken_links, broken_links_lock, session, max_depth):
 
         self.target_url = target_url
-        self.crawler_id = crawler_id
-        self.url_queue = url_queue
         self.broken_links = broken_links
-        self.url_queue_full_event = url_queue_full_event
+        self.broken_links_lock = broken_links_lock
         self.session = session
         self.max_depth = max_depth
 
-        self.crawl_count = 0
-
-    def is_valid_content_type(self, url):
-        try:
-            response = self.session.head(url, allow_redirects=True, timeout=5)
-            content_type = response.headers.get("Content-Type", "")
-
-            # Allow only text-based responses
-            if content_type.startswith("text/html"):
-                return True
-            else:
-                logger.debug(f"Skipping {url}, Content-Type: {content_type}")
-                return False
-        except requests.RequestException as e:
-            logger.error(f"Error checking {url}: {e}")
-            return False
+    def add_error_to_report(self, link, error_type, error=''):
+        link.status = error_type
+        link.error = error
+        if error_type == LinkStatus.OTHER_ERROR:
+            logger.error(f'Adding to broken links - {link.url}')
+        else:
+            logger.debug(f'Adding to broken links - {link.url}')
+        with self.broken_links_lock:
+            self.broken_links.append(link)
 
     # implement a request retry
     # todo - fix timeout error, catch and handle max retries (sometimes it works manually. check why)
@@ -49,72 +41,113 @@ class Crawler:
         wait=wait_exponential(multiplier=5, min=4, max=5),  # exponential backoff
         retry=retry_if_exception(retry_if_not_404)
     )
-    def fetch_url(self, url):
-        if self.is_valid_content_type(url):
+    def fetch_url(self, link):
+        url = link.url
+
+        try:
+            # 1st get header
+            response = self.session.head(url, allow_redirects=True, timeout=5)
+            logger.debug(f'Header request status - {response.status_code}')
+
+            if response.status_code == 404:
+                self.add_error_to_report(link, LinkStatus.NO_SUCH_PAGE)
+                return None
+
+            # Document http instead of https and continue crawling
+            if link.url.startswith("http://") and response.url.startswith("https://"):
+                self.add_error_to_report(link, LinkStatus.HTTP_INSTEAD_HTTPS)
+
+            # Don't fetch non text/html pages
+            content_type = response.headers.get("Content-Type", "")
+            if not content_type.startswith("text/html"):
+                logger.debug(f"skipping fetching the page {url} since Content-Type is "
+                             f"{content_type}")
+                return None
+
+            # Don't fetch pages under other domain
+            if not link.url.startswith(self.target_url):
+                logger.debug(f'{link.url} is not under {self.target_url}, so not fetching and parsing page.')
+                return None
+
+            # Don't fetch pages is their depth is maximal
+            if link.depth == self.max_depth:
+                logger.debug(f'The depth of {link.url} is maximal, so the page itself will not be fetched and '
+                             f'parsed.')
+                return None
+
+            # fetch the page
             response = self.session.get(url)
-            response.raise_for_status()
-            return response
-        return None
+            response.raise_for_status()  # Raise error for 4xx/5xx
+            logger.debug(f'Page request successful - {response.status_code}')
 
-    def crawl(self):
+        except requests.exceptions.RetryError as e:
+            self.add_error_to_report(link, LinkStatus.OTHER_ERROR, str(e))
+            return None
+        except requests.exceptions.HTTPError as e:
+            self.add_error_to_report(link, LinkStatus.OTHER_ERROR,
+                                     f"HTTPError: {e.response.status_code} - {e.response.reason}")
+            return None
+        except requests.exceptions.Timeout as e:
+            self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"TimeoutError: Request took too long.")
+            return None
+        except requests.exceptions.ConnectionError as e:
+            if "[Errno 11001] getaddrinfo failed" in str(e.args[0].reason):
+                self.add_error_to_report(link, LinkStatus.NO_SUCH_DOMAIN)
+            else:
+                self.add_error_to_report(link, LinkStatus.OTHER_ERROR, str(e))
+            return None
+        except requests.exceptions.RequestException as e:
+            if e.response.status_code == 404:
+                self.add_error_to_report(link, LinkStatus.NO_SUCH_PAGE)
+            else:
+                self.add_error_to_report(link, LinkStatus.OTHER_ERROR, str(e))
+            return None
 
-        logger.debug(f'Crawler {self.crawler_id} started.')
+        return response
 
-        if self.crawler_id != 0:
-            self.url_queue_full_event.wait()
+    def process(self, task):
+        current_link = task
 
-        while not self.url_queue.empty():
+        # request the target URL
+        logger.debug(f'Handling {str(current_link)}')
+        response = self.fetch_url(current_link)
 
-            current_link = self.url_queue.get()
+        new_links = []
+        if response is not None:
+            new_links = self.parse_and_get_links(response, current_link)
 
-            if current_link.depth >= self.max_depth:
+        return new_links
+
+    def parse_and_get_links(self, response, current_link):
+        logger.debug(f'Parsing {current_link.url}')
+        soup = BeautifulSoup(response.content, "html.parser", from_encoding="iso-8859-1")
+
+        # collect all the links
+        found_links = []
+        for link_element in soup.find_all("a", href=True):
+            url = link_element["href"]
+
+            # alink to section in the same page - ignore
+            if url.startswith('#'):
                 continue
 
-            # request the target URL
-            logger.debug(f'Crawler {self.crawler_id}: depth - {current_link.depth}, url - {current_link.absolute_url}')
-            try:
-                response = self.fetch_url(current_link.absolute_url)
-            except requests.exceptions.RequestException as e:
-                if e.response.status_code == 404:
-                    logger.debug(f'Crawler {self.crawler_id}: 404 - {current_link.absolute_url} referenced from '
-                                 f'{current_link.appeared_in}')
-                    current_link.status = LinkStatus.NOT_FOUND
-                    self.broken_links.put(current_link)
-                    break
+            # if relative address make absolute
+            url = requests.compat.urljoin(self.target_url, url)
 
-            if response is not None:
+            # a non URL link - ignore
+            if not url.startswith('http'):
+                logger.debug(f'Ignoring {url}')
+                continue
 
-                if current_link.absolute_url.startswith("http://") and response.url.startswith("https://"):
-                    logger.debug(f'Crawler {self.crawler_id}: HTTP_INSTEAD_HTTPS - {current_link.absolute_url} '
-                                 f'referenced from {current_link.appeared_in}')
-                    current_link.status = LinkStatus.HTTP_INSTEAD_HTTPS
-                    self.broken_links.put(current_link)
-                    break
+            # a link under the target URL - a new full crawl destination
+            if url.startswith(self.target_url):
+                found_links.append(Link(url, current_link.depth + 1, current_link.url))
+            # a link not under the target URL - check it and stop crawling
+            else:
+                found_links.append(Link(url, self.max_depth, current_link.url))
 
-                # parse the HTML
-                soup = BeautifulSoup(response.content, "html.parser", from_encoding="iso-8859-1")
+        logger.debug(f'Finished parsing. {len(found_links)} links were found.')
+        return found_links
 
-                # collect all the links
-                for link_element in soup.find_all("a", href=True):
-                    url = link_element["href"]
-
-                    # check if the URL is absolute or relative
-                    if not url.startswith("http"):
-                        absolute_url = requests.compat.urljoin(self.target_url, url)
-                    else:
-                        absolute_url = url
-
-                    if absolute_url.startswith(self.target_url):
-                        self.url_queue.put(Link(absolute_url, current_link.depth + 1, current_link.absolute_url))
-                    else:
-                        self.url_queue.put(Link(absolute_url, self.max_depth, current_link.absolute_url))
-
-                        if not self.url_queue_full_event.is_set():
-                            logger.debug(f'Crawler {self.crawler_id} setting url_queue_full_event.')
-                            self.url_queue_full_event.set()
-
-            if not self.url_queue_full_event.is_set():  # and this_crawler_count == self.workers_num:
-                logger.debug(f'Crawler {self.crawler_id} setting url_queue_full_event.')
-                self.url_queue_full_event.set()
-
-        logger.debug(f'Crawler {self.crawler_id} finished.')
+    def finalize(self):
+        pass
