@@ -49,19 +49,23 @@ class BrokenLinksCrawler:
             self.stop_live_display = True
             display_thread.join()
 
-        execution_time = datetime.now() - self.start_time
         visited_urls_num = self.crawlers_manager.get_tasks_num()
         for report_type, report_name in zip(self.report_types, self.report_names):
             report = ReportGenerator.create_report(report_type)
-            report.generate(report_name, self.broken_links, execution_time, visited_urls_num, self.crawlers_num)
+            report.generate(report_name, self.broken_links, self.get_time_delta(), visited_urls_num, self.crawlers_num)
+
+    def get_time_delta(self):
+        delta = datetime.now() - self.start_time
+        total_seconds = delta.total_seconds()
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{int(hours):02}:{int(minutes):02}:{seconds:05.2f}"
 
     def live_display(self):
-        start_time = time.time()
-
         try:
             while not self.stop_live_display:
-                elapsed = time.time() - start_time
-                msg = f"Execution Time: {elapsed:.1f}s | Visited URLs: {self.crawlers_manager.get_tasks_num()} | " \
+                msg = f"Execution Time: {self.get_time_delta()} | " \
+                      f"Visited URLs: {self.crawlers_manager.get_tasks_num()} | " \
                       f"Broken URLs Found: {len(self.broken_links)}"
                 print(f"\r{msg}", end='', flush=True)
 
@@ -71,16 +75,3 @@ class BrokenLinksCrawler:
 
         except KeyboardInterrupt:
             print("\nInterrupted by user.")
-
-        a = 3
-
-
-"""
-import time
-
-for i in reversed(range(11)):
-    print(f"\rCountdown: {i} seconds remaining", end='', flush=True)
-    time.sleep(1)
-
-print("\nDone!")
-"""

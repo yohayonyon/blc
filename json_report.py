@@ -21,7 +21,7 @@ class JsonReport(Report):
 
         report = {
             "report_generated_at": datetime.utcnow().isoformat() + "Z",
-            "execution_time_seconds": str(execution_time),
+            "execution_time_seconds": execution_time,
             "visited_urls": visited_urls_num,
             "threads_used": thread_num,
             "links": []

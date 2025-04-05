@@ -14,6 +14,14 @@ class BLC:
         self.parse_arguments()
         self.set_log_level()
 
+        # target_urls = ["https://webee.technion.ac.il/~ayellet/",
+        #                "https://cgm.technion.ac.il/",
+        #                "https://ece.technion.ac.il/"]
+
+        self.arguments.url = "https://cgm.technion.ac.il/"
+        self.arguments.threads = 20
+        self.arguments.depth = 2
+
         report_types = ["human", "json"]
         report_names = [self.arguments.human_report, self.arguments.json_report]
 

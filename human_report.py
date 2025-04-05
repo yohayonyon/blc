@@ -1,4 +1,4 @@
-from collections import defaultdict
+from datetime import datetime
 
 from loguru import logger
 
@@ -7,30 +7,35 @@ from report import Report
 
 class HumanReport(Report):
 
-    def generate(self, file_name, links, execution_time, visited_urls_num, thread_num):
-        counters = defaultdict(int)
+    def generate(self, report_file_name, links_list, execution_time, visited_urls_num, thread_num):
+        """
+        Generates a human-readable plain text report for a crawler run.
 
-        with open(file_name, 'w') as report:
-            # Header
-            report.write("Broken Links Crawler Report\n")
-            report.write("===========================\n")
-            report.write("\n")
+        Parameters:
+            report_file_name (str): Output text file path.
+            links_list (List[Dict]): List of link info dictionaries.
+            execution_time (float): Execution time in seconds.
+            visited_urls_num (int): Number of visited URLs.
+            thread_num (int): Number of threads used.
+        """
 
-            # Body
-            report.write("The broken links\n")
-            report.write("-----------------\n")
-            for i, link in enumerate(links):
-                report.write(f'({i + 1}) {link}\n')
-                counters[link.status] += 1
+        with open(report_file_name, 'w', encoding='utf-8') as f:
+            f.write("Crawler Report\n")
+            f.write("=" * 60 + "\n")
+            f.write(f"Generated at     : {datetime.utcnow().isoformat()}Z\n")
+            f.write(f"Execution Time   : {execution_time}\n")
+            f.write(f"Visited URLs     : {visited_urls_num}\n")
+            f.write(f"Threads Used     : {thread_num}\n")
+            f.write("=" * 60 + "\n\n")
+            f.write("Discovered Links:\n")
+            f.write("-" * 60 + "\n")
 
-            # Footer
-            report.write("\n")
-            report.write("Summary\n")
-            report.write("-------\n")
-            report.write(f"The execution took {execution_time}.\n")
-            report.write(f"{visited_urls_num} URLs were visited by {thread_num} threads.\n")
-            report.write(f"The following errors were found:\n")
-            for i, link_status in enumerate(counters):
-                report.write(f"({i + 1}) {counters[link_status]} URLs with status {link_status.name.lower()}\n")
+            for i, link in enumerate(links_list, start=1):
+                f.write(f"[{i}] URL         : {link.url}\n")
+                f.write(f"     Depth       : {link.depth}\n")
+                f.write(f"     Appeared In : {link.appeared_in}\n")
+                f.write(f"     Status      : {link.status.name.lower()}\n")
+                f.write(f"     Error       : {link.error}\n")
+                f.write("-" * 60 + "\n")
 
-            logger.info(f"A textual report written to: {file_name}")
+        logger.debug(f"Human-readable report written to: {report_file_name}")
