@@ -1,3 +1,6 @@
+import os
+
+import certifi
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
@@ -5,6 +8,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from link import Link, LinkStatus
 from processor import Processor
+from robots_txt_handler import RobotsTxtHandler
 
 
 def retry_if_not_404(exception):
@@ -44,9 +48,21 @@ class Crawler(Processor):
     def fetch_url(self, link):
         url = link.url
 
+        # Read robots.txt and decide if to continue
+        # robots = RobotsTxtHandler(url, user_agent="MyCrawlerBot")
+        # if not robots.can_fetch(url):
+        #     self.add_error_to_report(link, LinkStatus.OTHER_ERROR, "Cannot fetch according to robots.txt")
+        #     return None
+
+        # todo
+        if os.name == "Linux":
+            verify = "/etc/ssl/certs/ca-certificates.crt"
+        else:
+            verify = certifi.where()
+
         try:
             # 1st get header
-            response = self.session.head(url, allow_redirects=True, timeout=5)
+            response = self.session.head(url, allow_redirects=True, timeout=5, verify=certifi.where())
             logger.debug(f'Header request status - {response.status_code}')
 
             if response.status_code == 404:
@@ -76,7 +92,7 @@ class Crawler(Processor):
                 return None
 
             # fetch the page
-            response = self.session.get(url)
+            response = self.session.get(url, verify=certifi.where())
             response.raise_for_status()  # Raise error for 4xx/5xx
             logger.debug(f'Page request successful - {response.status_code}')
 

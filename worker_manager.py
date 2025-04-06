@@ -19,6 +19,9 @@ class WorkerManager:
             self.all_tasks_to_process = set([first_task])
             self.all_tasks_to_process_lock = threading.Lock()
 
+        self.visited_counter = 0
+        self.visited_counter_lock = threading.Lock()
+
     def worker(self):
         logger.debug(f"Starting")
         while True:
@@ -29,6 +32,8 @@ class WorkerManager:
 
             try:
                 new_tasks = self.processor.process(task)
+                with self.visited_counter_lock:
+                    self.visited_counter += 1
             except Exception as e:
                 logger.error(f"Error: {e}")
                 self.task_queue.task_done()
@@ -68,3 +73,6 @@ class WorkerManager:
 
     def get_tasks_num(self):
         return len(self.all_tasks_to_process)
+
+    def get_visited_num(self):
+        return self.visited_counter

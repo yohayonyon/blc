@@ -77,9 +77,8 @@ class BrokenLinksCrawler:
     def live_display(self):
         try:
             while not self.stop_live_display:
-                msg = f"Execution Time: {self.get_time_delta()} | " \
-                      f"Visited URLs: {self.crawlers_manager.get_tasks_num()} | " \
-                      f"Broken URLs Found: {len(self.broken_links)}"
+                msg = f"Execution Time: {self.get_time_delta()}  |  " \
+                      f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/{self.crawlers_manager.get_visited_num()}/{self.crawlers_manager.get_tasks_num()}"
                 print(f"\r{msg}", end='', flush=True)
 
                 time.sleep(0.1)  # Simulate some work
