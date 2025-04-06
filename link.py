@@ -11,10 +11,10 @@ class LinkStatus(Enum):
 
 
 class Link:
-    def __init__(self, url, depth, appeared_in, status=LinkStatus.NOT_VISITED, error=''):
+    def __init__(self, url, depth, first_found_on, status=LinkStatus.NOT_VISITED, error=''):
         self.url = url
         self.depth = depth
-        self.appeared_in = appeared_in
+        self.first_found_on = first_found_on
         self.status = status
         self.error = error
 
@@ -25,7 +25,7 @@ class Link:
         return hash(self.url)
 
     def __str__(self):
-        link_str = f'{self.status.name.lower():20}, depth = {self.depth}: {self.appeared_in} ==> {self.url}'
+        link_str = f'{self.status.name.lower():20}, depth = {self.depth}: {self.first_found_on} ==> {self.url}'
         if self.status == LinkStatus.OTHER_ERROR:
             link_str += f', error: {self.error}'
         return link_str

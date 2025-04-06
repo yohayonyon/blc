@@ -15,6 +15,7 @@ from worker_manager import WorkerManager
 class BrokenLinksCrawler:
     EMAIL_SENDER = 'blc@blc.org'
     EMAIL_PASSWORD = 'abcdefgh'
+
     def __init__(self, target_url, report_types, report_names, silent, crawlers_num, max_depth, email_report, email_to):
         self.target_url = target_url if target_url[-1] == '/' else f'{target_url}/'
         self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count()

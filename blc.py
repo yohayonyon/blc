@@ -20,15 +20,13 @@ def parse_arguments():
                         help="The name for a human readable report to generate")
     parser.add_argument("-jr", "--json_report", default="report.json",
                         help="The name for a json readable report to generate")
-    parser.add_argument("-pm", "--prints_mode", choices=["regular", "silent"], default="regular",
-                        help="What to print to screen during execution (regular, silent).")
     parser.add_argument("-l", "--log_level", choices=["none", "trace", "debug", "info", "success", "warning",
                                                       "error", "critical"],
                         default="none", help="How verbose you want the log to be [none, trace, debug, info, "
                                              "success, warning, error, critical].")
     parser.add_argument("-e", "--email_to", type=str, help="Destination email address to send the report to")
     parser.add_argument("-er", "--email_report", choices=["never", "errors", "always"], default="never",
-                        help="When to send the email report: [never, errors, or always]")
+                        help="Where to send the email report to [never, errors, or always]")
 
     args = parser.parse_args()
 

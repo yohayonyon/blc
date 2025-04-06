@@ -53,7 +53,7 @@ class EmailReportSender:
         for i, link in enumerate(links_list, start=1):
             lines += [f"[{i}] URL        : {link.url}",
                       f"     Depth       : {link.depth}",
-                      f"     Appeared In : {link.appeared_in}",
+                      f"     Appeared In : {link.first_found_on}",
                       f"     Status      : {link.status.name.lower()}",
                       f"     Error       : {link.error}", "-" * 60]
 

@@ -31,7 +31,7 @@ class JsonReport(Report):
             report["links"].append({
                 "url": link.url,
                 "depth": link.depth,
-                "appeared_in": link.appeared_in,
+                "appeared_in": link.first_found_on,
                 "status": link.status.name.lower(),
                 "error": link.error
             })

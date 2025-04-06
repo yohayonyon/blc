@@ -33,7 +33,7 @@ class HumanReport(Report):
             for i, link in enumerate(links_list, start=1):
                 f.write(f"[{i}] URL         : {link.url}\n")
                 f.write(f"     Depth       : {link.depth}\n")
-                f.write(f"     Appeared In : {link.appeared_in}\n")
+                f.write(f"     Appeared In : {link.first_found_on}\n")
                 f.write(f"     Status      : {link.status.name.lower()}\n")
                 f.write(f"     Error       : {link.error}\n")
                 f.write("-" * 60 + "\n")
