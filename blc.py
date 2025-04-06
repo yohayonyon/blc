@@ -6,70 +6,67 @@ from loguru import logger
 from broken_links_crawler import BrokenLinksCrawler
 
 
-class BLC:
-    def __init__(self):
-        self.arguments = self.parse_arguments()
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Crawl and find broken links on a website")
 
-    def work(self, ):
-        self.parse_arguments()
-        self.set_log_level()
+    # Positional arguments
+    parser.add_argument("url", help="A website url")
 
-        # target_urls = ["https://webee.technion.ac.il/~ayellet/",
-        #                "https://cgm.technion.ac.il/",
-        #                "https://ece.technion.ac.il/"]
+    # Optional arguments
+    parser.add_argument("-t", "--threads", type=int, default=-1, help="Num of threads to execute in parallel")
+    parser.add_argument("-d", "--depth", type=int, default=-1, help="Crawling depth")
+    parser.add_argument("-s", "--silent", action="store_true", help="Print nothing to screen")
+    parser.add_argument("-hr", "--human_report", default="report.txt",
+                        help="The name for a human readable report to generate")
+    parser.add_argument("-jr", "--json_report", default="report.json",
+                        help="The name for a json readable report to generate")
+    parser.add_argument("-pm", "--prints_mode", choices=["regular", "silent"], default="regular",
+                        help="What to print to screen during execution (regular, silent).")
+    parser.add_argument("-l", "--log_level", choices=["none", "trace", "debug", "info", "success", "warning",
+                                                      "error", "critical"],
+                        default="none", help="How verbose you want the log to be [none, trace, debug, info, "
+                                             "success, warning, error, critical].")
+    parser.add_argument("-e", "--email_to", type=str, help="Destination email address to send the report to")
+    parser.add_argument("-er", "--email_report", choices=["never", "errors", "always"], default="never",
+                        help="When to send the email report: [never, errors, or always]")
 
-        self.arguments.url = "https://cgm.technion.ac.il/"
-        self.arguments.threads = 20
-        self.arguments.depth = 2
+    args = parser.parse_args()
 
-        report_types = ["human", "json"]
-        report_names = [self.arguments.human_report, self.arguments.json_report]
+    return args
 
-        broken_links_crawler = BrokenLinksCrawler(target_url=self.arguments.url, report_types=report_types,
-                                                  report_names=report_names, silent=self.arguments.silent,
-                                                  crawlers_num=self.arguments.threads, max_depth=self.arguments.depth)
-        broken_links_crawler.start()
 
-    @staticmethod
-    def parse_arguments():
-        parser = argparse.ArgumentParser(description="Crawl and find broken links on a website")
+def set_log_level(log_level):
+    # Configure loguru: include timestamp, level, and thread name (crawler ID)
+    logger.remove()
+    if log_level != "none":
+        logger.add(
+            sys.stdout,
+            level=log_level.upper(),
+            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                   "<level>{level: <1}</level> | "
+                   "<cyan>{thread.name: <1}</cyan>:<cyan>{name: <1}</cyan>:<cyan>{function: <1}</cyan>:<cyan>{line: <1}</cyan> | "
+                   "{message}"
+        )
 
-        # Positional arguments
-        parser.add_argument("url", help="A website url")
 
-        # Optional arguments
-        parser.add_argument("-t", "--threads", type=int, default=-1, help="Num of threads to execute in parallel")
-        parser.add_argument("-d", "--depth", type=int, default=-1, help="Crawling depth")
-        parser.add_argument("-s", "--silent", action="store_true", help="Print nothing to screen")
-        parser.add_argument("-hr", "--human_report", default="report.txt",
-                            help="The name for a human readable report to generate")
-        parser.add_argument("-jr", "--json_report", default="report.json",
-                            help="The name for a json readable report to generate")
-        parser.add_argument("-pm", "--prints_mode", choices=["regular", "silent"], default="regular",
-                            help="What to print to screen during execution (regular, silent).")
-        parser.add_argument("-l", "--log_level", choices=["none", "trace", "debug", "info", "success", "warning",
-                                                          "error", "critical"],
-                            default="none", help="How verbose you want the log to be [none, trace, debug, info, "
-                                                 "success, warning, error, critical].")
+def main():
+    args = parse_arguments()
+    if args.email_report != "never":
+        if not args.email_to:
+            print("You must specify --email_to if you want to send a report.")
+            return
 
-        args = parser.parse_args()
+    set_log_level(args.log_level)
 
-        return args
+    report_types = ["human", "json"]
+    report_names = [args.human_report, args.json_report]
 
-    def set_log_level(self):
-        # Configure loguru: include timestamp, level, and thread name (crawler ID)
-        logger.remove()
-        if self.arguments.log_level != "none":
-            logger.add(
-                sys.stdout,
-                level=self.arguments.log_level.upper(),
-                format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-                       "<level>{level: <1}</level> | "
-                       "<cyan>{thread.name: <1}</cyan>:<cyan>{name: <1}</cyan>:<cyan>{function: <1}</cyan>:<cyan>{line: <1}</cyan> | "
-                       "{message}"
-            )
+    broken_links_crawler = BrokenLinksCrawler(target_url=args.url, report_types=report_types,
+                                              report_names=report_names, silent=args.silent,
+                                              crawlers_num=args.threads, max_depth=args.depth,
+                                              email_report=args.email_report, email_to=args.email_to)
+    broken_links_crawler.start()
 
 
 if __name__ == "__main__":
-    blc = BLC()
-    blc.work()
+    main()

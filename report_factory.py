@@ -9,5 +9,4 @@ class ReportGenerator:
             case "human":
                 return HumanReport()
             case "json":
-                pass
                 return JsonReport()

@@ -6,16 +6,21 @@ from datetime import datetime
 import requests
 
 from crawler import Crawler
+from email_report_sender import EmailReportSender
 from link import Link, LinkStatus
 from report_factory import ReportGenerator
 from worker_manager import WorkerManager
 
 
 class BrokenLinksCrawler:
-    def __init__(self, target_url, report_types, report_names, silent, crawlers_num, max_depth=-1):
+    EMAIL_SENDER = 'blc@blc.org'
+    EMAIL_PASSWORD = 'abcdefgh'
+    def __init__(self, target_url, report_types, report_names, silent, crawlers_num, max_depth, email_report, email_to):
         self.target_url = target_url if target_url[-1] == '/' else f'{target_url}/'
         self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count()
         self.max_depth = max_depth if max_depth != -1 else float("inf")
+        self.email_report = email_report
+        self.email_to = email_to
 
         self.session = requests.Session()
         self.broken_links = []
@@ -49,10 +54,17 @@ class BrokenLinksCrawler:
             self.stop_live_display = True
             display_thread.join()
 
+        execution_time = self.get_time_delta()
+
         visited_urls_num = self.crawlers_manager.get_tasks_num()
         for report_type, report_name in zip(self.report_types, self.report_names):
             report = ReportGenerator.create_report(report_type)
-            report.generate(report_name, self.broken_links, self.get_time_delta(), visited_urls_num, self.crawlers_num)
+            report.generate(report_name, self.broken_links, execution_time, visited_urls_num, self.crawlers_num)
+
+        if (self.email_report == "errors" and len(self.broken_links) > 0) or self.email_report == "always":
+            email_sender = EmailReportSender(self.EMAIL_SENDER, self.EMAIL_PASSWORD, self.email_to)
+            email_sender.generate_and_send(self.email_report, self.broken_links, execution_time,
+                                           self.crawlers_manager.get_tasks_num(), self.crawlers_num)
 
     def get_time_delta(self):
         delta = datetime.now() - self.start_time
