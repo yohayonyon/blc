@@ -18,13 +18,17 @@ def retry_if_not_404(exception):
     )
 
 
-class Crawler(Processor):
-    def __init__(self, target_url, broken_links, broken_links_lock, session, max_depth):
+def add_trailing_slash(url):
+    return url if url[-1] == '/' else f'{url}/'
 
-        self.target_url = target_url
+
+class Crawler(Processor):
+    session = requests.Session()
+
+    def __init__(self, target_url, broken_links, broken_links_lock, max_depth):
+        self.target_url = add_trailing_slash(target_url)
         self.broken_links = broken_links
         self.broken_links_lock = broken_links_lock
-        self.session = session
         self.max_depth = max_depth
 
     def add_error_to_report(self, link, error_type, error=''):
@@ -48,21 +52,22 @@ class Crawler(Processor):
     def fetch_url(self, link):
         url = link.url
 
+        # todo
         # Read robots.txt and decide if to continue
         # robots = RobotsTxtHandler(url, user_agent="MyCrawlerBot")
         # if not robots.can_fetch(url):
         #     self.add_error_to_report(link, LinkStatus.OTHER_ERROR, "Cannot fetch according to robots.txt")
         #     return None
-
-        # todo
-        if os.name == "Linux":
-            verify = "/etc/ssl/certs/ca-certificates.crt"
-        else:
-            verify = certifi.where()
+        #
+        # # todo
+        # if os.name == "Linux":
+        #     verify = "/etc/ssl/certs/ca-certificates.crt"
+        # else:
+        #     verify = certifi.where()
 
         try:
             # 1st get header
-            response = self.session.head(url, allow_redirects=True, timeout=5, verify=certifi.where())
+            response = self.session.head(url, allow_redirects=True, timeout=5)#, verify=verify)
             logger.debug(f'Header request status - {response.status_code}')
 
             if response.status_code == 404:
@@ -138,16 +143,9 @@ class Crawler(Processor):
         logger.debug(f'Parsing {current_link.url}')
         soup = BeautifulSoup(response.content, "html.parser", from_encoding="iso-8859-1")
 
-        # collect all the links
         found_links = []
         for link_element in soup.find_all("a", href=True):
             url = link_element["href"]
-
-            # alink to section in the same page - ignore
-            if url.startswith('#'):
-                continue
-
-            # if relative address make absolute
             url = requests.compat.urljoin(self.target_url, url)
 
             # a non URL link - ignore
@@ -155,11 +153,16 @@ class Crawler(Processor):
                 logger.debug(f'Ignoring {url}')
                 continue
 
-            # a link under the target URL - a new full crawl destination
+            url = add_trailing_slash(url)
+
+            if url.startswith(f'{current_link.url}#'):
+                logger.debug(f'A new link - other section on the same page was found, so check it and stop.')
+                found_links.append(Link(url, self.max_depth, current_link.url))
             if url.startswith(self.target_url):
+                logger.debug(f'A new link to crawl')
                 found_links.append(Link(url, current_link.depth + 1, current_link.url))
-            # a link not under the target URL - check it and stop crawling
             else:
+                logger.debug(f'A new link - not under the target domain, so check it and stop.')
                 found_links.append(Link(url, self.max_depth, current_link.url))
 
         logger.debug(f'Finished parsing. {len(found_links)} links were found.')

@@ -23,12 +23,10 @@ class BrokenLinksCrawler:
         self.email_report = email_report
         self.email_to = email_to
 
-        self.session = requests.Session()
         self.broken_links = []
         self.broken_links_lock = threading.Lock()
 
-        self.crawler = Crawler(target_url, self.broken_links, self.broken_links_lock, session=self.session,
-                               max_depth=self.max_depth)
+        self.crawler = Crawler(target_url, self.broken_links, self.broken_links_lock, max_depth=self.max_depth)
 
         self.report_types = report_types
         self.report_names = report_names
