@@ -1,20 +1,58 @@
 from datetime import datetime
+from typing import List
 
 from loguru import logger
+from link import Link
 
 
 class EmailReportSender:
-    def __init__(self, sender, password, recipient):
+    """Handles generation and sending of crawler reports via email."""
+
+    def __init__(self, sender: str, password: str, recipient: str):
+        """
+        Initialize the email sender.
+
+        Args:
+            sender: Sender email address.
+            password: Sender email password.
+            recipient: Recipient email address.
+        """
         self.sender = sender
         self.password = password
         self.recipient = recipient
 
-    def generate_and_send(self, report_file_name, links_list, execution_time, visited_urls_num, thread_num):
-        email_body = self.generate_email_body(report_file_name, links_list, execution_time, visited_urls_num,
-                                              thread_num)
-        self.send_email_report('blc@blc.org', 'password', email_body)
+    def generate_and_send(
+        self,
+        report_file_name: str,
+        links_list: List[Link],
+        execution_time: float,
+        visited_urls_num: int,
+        thread_num: int
+    ) -> None:
+        """
+        Generate the email report and send it.
 
-    def send_email_report(self, email, password, report_text):
+        Args:
+            report_file_name: Report file name (unused, for future use).
+            links_list: List of Link objects.
+            execution_time: Time taken by crawler.
+            visited_urls_num: Number of visited URLs.
+            thread_num: Number of threads used.
+        """
+        email_body = self.generate_email_body(
+            report_file_name, links_list, execution_time, visited_urls_num, thread_num
+        )
+        self.send_email_report(self.sender, self.password, email_body)
+
+    def send_email_report(self, email: str, password: str, report_text: str) -> None:
+        """
+        Send the report via SMTP.
+
+        Args:
+            email: Sender email.
+            password: Sender password.
+            report_text: Plain text report content.
+        """
         import smtplib
         from email.mime.text import MIMEText
 
@@ -24,7 +62,7 @@ class EmailReportSender:
         msg['To'] = self.recipient
 
         with smtplib.SMTP('localhost', 1025) as server:  # For local testing
-            # For real SMTP use:
+            # For production SMTP use:
             # server.starttls()
             # server.login(self.sender, self.password)
             server.send_message(msg)
@@ -32,38 +70,43 @@ class EmailReportSender:
         logger.debug("Email sent.")
 
     @staticmethod
-    def generate_email_body(report_file_name, links_list, execution_time, visited_urls_num, thread_num):
+    def generate_email_body(
+        report_file_name: str,
+        links_list: List[Link],
+        execution_time: float,
+        visited_urls_num: int,
+        thread_num: int
+    ) -> str:
         """
-        Generates an email-ready plain text report for a crawler run,
-        saves it to a file, and returns the report content as a string.
+        Generate a plain-text crawler report for email.
 
-        Parameters:
-            report_file_name (str): File to save the report content.
-            links_list (List[Dict]): List of link info.
-            execution_time (float): Time taken by crawler (seconds).
-            visited_urls_num (int): Number of visited URLs.
-            thread_num (int): Number of threads used.
+        Args:
+            report_file_name: File to save report (currently unused).
+            links_list: List of Link objects.
+            execution_time: Time taken by crawler.
+            visited_urls_num: Number of visited URLs.
+            thread_num: Number of threads used.
 
         Returns:
             str: The full plain-text report as a string.
         """
-        lines = ["Subject: Crawler Report", "", "Crawler Report", "=" * 60,
-                 f"Generated at     : {datetime.utcnow().isoformat()}Z",
-                 f"Execution Time   : {execution_time}", f"Visited URLs     : {visited_urls_num}",
-                 f"Threads Used     : {thread_num}", "=" * 60, "", "Discovered Links:", "-" * 60]
+        lines = [
+            "Subject: Crawler Report", "", "Crawler Report", "=" * 60,
+            f"Generated at     : {datetime.utcnow().isoformat()}Z",
+            f"Execution Time   : {execution_time}",
+            f"Visited URLs     : {visited_urls_num}",
+            f"Threads Used     : {thread_num}",
+            "=" * 60, "", "Discovered Links:", "-" * 60
+        ]
 
         for i, link in enumerate(links_list, start=1):
-            lines += [f"[{i}] URL        : {link.url}",
-                      f"     Depth       : {link.depth}",
-                      f"     Appeared In : {link.first_found_on}",
-                      f"     Status      : {link.status.name.lower()}",
-                      f"     Error       : {link.error}", "-" * 60]
+            lines += [
+                f"[{i}] URL        : {link.url}",
+                f"     Depth       : {link.depth}",
+                f"     Appeared In : {link.first_found_on}",
+                f"     Status      : {link.status.name.lower()}",
+                f"     Error       : {link.error}",
+                "-" * 60
+            ]
 
-        report_content = "\n".join(lines)
-
-        # # Save to file
-        # with open(report_file_name, 'w', encoding='utf-8') as f:
-        #     f.write(report_content)
-        #
-        # print(f"Email report saved to: {report_file_name}")
-        return report_content
+        return "\n".join(lines)

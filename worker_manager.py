@@ -1,31 +1,42 @@
 import queue
 import threading
+from typing import Any
 
 from loguru import logger
 
 
 class WorkerManager:
-    def __init__(self, first_task, processor, threads_num, repeat_task=True):
-        self.first_task = first_task
+    """Manages a pool of threads to process tasks concurrently."""
 
+    def __init__(self, first_task: Any, processor: Any, threads_num: int, repeat_task: bool = True):
+        """
+        Initialize the worker manager.
+
+        Args:
+            first_task: The initial task to start with.
+            processor: An object with a `process(task)` method.
+            threads_num: Number of worker threads.
+            repeat_task: Whether to repeatedly reprocess the same tasks.
+        """
+        self.first_task = first_task
         self.processor = processor
         self.threads_num = threads_num
-
         self.repeat_task = repeat_task
-        self.threads = []
+        self.threads: list[threading.Thread] = []
+        self.task_queue: queue.Queue = queue.Queue()
 
-        self.task_queue = queue.Queue()
         if not repeat_task:
-            self.all_tasks_to_process = set([first_task])
+            self.all_tasks_to_process: set = {first_task}
             self.all_tasks_to_process_lock = threading.Lock()
 
-        self.processed_counter = 0
+        self.processed_counter: int = 0
         self.processed_counter_lock = threading.Lock()
 
-    def worker(self):
-        logger.debug(f"Starting")
+    def worker(self) -> None:
+        """Thread function for processing tasks from the queue."""
+        logger.debug("Starting")
         while True:
-            task = self.task_queue.get()  # Block until an item is available.
+            task = self.task_queue.get()
             if task is None:
                 self.task_queue.task_done()
                 break
@@ -52,10 +63,10 @@ class WorkerManager:
             self.task_queue.task_done()
 
         self.processor.finalize()
+        logger.debug("Finished")
 
-        logger.debug(f"Finished")
-
-    def start(self):
+    def start(self) -> None:
+        """Start the worker threads and add the first task to the queue."""
         logger.debug("Work is starting.")
         self.task_queue.put(self.first_task)
         for i in range(self.threads_num):
@@ -63,7 +74,8 @@ class WorkerManager:
             t.start()
             self.threads.append(t)
 
-    def end(self):
+    def end(self) -> None:
+        """Wait for all tasks to finish and join all threads."""
         self.task_queue.join()
         for _ in range(self.threads_num):
             self.task_queue.put(None)
@@ -71,12 +83,12 @@ class WorkerManager:
             t.join()
         logger.info(f"{len(self.all_tasks_to_process)} tasks were processed.")
 
-    def get_tasks_num(self):
+    def get_tasks_num(self) -> int:
+        """Return the number of unique tasks seen."""
         with self.all_tasks_to_process_lock:
-            res = len(self.all_tasks_to_process)
-        return res
+            return len(self.all_tasks_to_process)
 
-    def get_processed_num(self):
+    def get_processed_num(self) -> int:
+        """Return the number of tasks that have been processed."""
         with self.processed_counter_lock:
-            res = self.processed_counter
-        return res
+            return self.processed_counter

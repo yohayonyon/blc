@@ -1,24 +1,32 @@
 from datetime import datetime
+from typing import List
 
 from loguru import logger
-
 from report import Report
+from link import Link
 
 
 class HumanReport(Report):
+    """Generates a human-readable text report from crawled link data."""
 
-    def generate(self, report_file_name, links_list, execution_time, visited_urls_num, thread_num):
+    def generate(
+        self,
+        report_file_name: str,
+        links_list: List[Link],
+        execution_time: float,
+        visited_urls_num: int,
+        thread_num: int
+    ) -> None:
         """
-        Generates a human-readable plain text report for a crawler run.
+        Generate a plain text report.
 
-        Parameters:
-            report_file_name (str): Output text file path.
-            links_list (List[Dict]): List of link info dictionaries.
-            execution_time (float): Execution time in seconds.
-            visited_urls_num (int): Number of visited URLs.
-            thread_num (int): Number of threads used.
+        Args:
+            report_file_name: Output text file path.
+            links_list: List of Link objects.
+            execution_time: Execution time in seconds.
+            visited_urls_num: Number of visited URLs.
+            thread_num: Number of threads used.
         """
-
         with open(report_file_name, 'w', encoding='utf-8') as f:
             f.write("Crawler Report\n")
             f.write("=" * 60 + "\n")

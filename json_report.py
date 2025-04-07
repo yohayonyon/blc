@@ -1,24 +1,33 @@
 import json
 from datetime import datetime
+from typing import List
 
 from loguru import logger
-
 from report import Report
+from link import Link
 
 
 class JsonReport(Report):
-    def generate(self, report_file_name, links_list, execution_time, visited_urls_num, thread_num):
-        """
-        Generates a JSON report for a crawler run.
+    """Generates a JSON report from crawled link data."""
 
-        Parameters:
-            report_file_name (str): Path to the output JSON report file.
-            links_list (List[Dict]): List of link information dictionaries.
-            execution_time (float): Total time taken by the crawler (in seconds).
-            visited_urls_num (int): Total number of visited URLs.
-            thread_num (int): Number of threads used during crawling.
+    def generate(
+        self,
+        report_file_name: str,
+        links_list: List[Link],
+        execution_time: float,
+        visited_urls_num: int,
+        thread_num: int
+    ) -> None:
         """
+        Generate a JSON report file.
 
+        Args:
+            report_file_name: Output JSON file name.
+            links_list: List of Link objects.
+            execution_time: Total crawl time in seconds.
+            visited_urls_num: Number of URLs visited.
+            thread_num: Number of threads used.
+        """
         report = {
             "report_generated_at": datetime.utcnow().isoformat() + "Z",
             "execution_time_seconds": execution_time,
