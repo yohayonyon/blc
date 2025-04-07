@@ -30,7 +30,7 @@ def parse_arguments() -> argparse.Namespace:
                         help="Change the human-readable report file name from report.txt")
     parser.add_argument("--json_report", default="report.json",
                         help="Change the json report file name from report.json")
-    parser.add_argument("--log_display", type=bool, default=False,
+    parser.add_argument("--log_display", action="store_true",
                         help="If set log will be printed also to stdout")
     parser.add_argument("--email_to", type=str, help="Destination email address for sending report")
     parser.add_argument( "--email_report_mode", choices=["never", "errors", "always"], default="always",
