@@ -13,7 +13,7 @@ class HumanReport(Report):
         self,
         report_file_name: str,
         links_list: List[Link],
-        execution_time: str,
+        execution_time: float,
         visited_urls_num: int,
         thread_num: int
     ) -> None:
@@ -23,7 +23,7 @@ class HumanReport(Report):
         Args:
             report_file_name: Output text file path.
             links_list: List of Link objects.
-            execution_time: Execution time string.
+            execution_time: Execution time in seconds.
             visited_urls_num: Number of visited URLs.
             thread_num: Number of threads used.
         """
