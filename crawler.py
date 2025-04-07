@@ -6,7 +6,8 @@ import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from link import Link, LinkStatus
 from processor import Processor
 
@@ -74,8 +75,23 @@ class Crawler(Processor):
 
         try:
             # 1st get header
-            response = self.session.head(url, allow_redirects=True, timeout=5)#, verify=verify)
-            logger.debug(f'Header request status - {response.status_code}')
+            # === Attempt 1: Normal SSL Verification ===
+            try:
+                verify = certifi.where()
+                response = self.session.head(url, verify=verify, timeout=10)
+                response.raise_for_status()
+                logger.debug(f'Successfully (status {response.status_code}) fetched header with SSL verification: {url}')
+
+            # === SSL Error: Retry with verify=False ===
+            except requests.exceptions.SSLError as ssl_err:
+                logger.warning(f"SSL verification failed for {url}, retrying without verification: {ssl_err}")
+                try:
+                    verify = False
+                    response = self.session.head(url, verify=verify, timeout=10)
+                    response.raise_for_status()
+                    logger.debug(f"Successfully (status {response.status_code}) fetched header without SSL verification: {url}")
+                except requests.exceptions.SSLError as ssl_err:
+                    self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"SSL fallback also failed: {ssl_err}")
 
             if response.status_code == 404:
                 self.add_error_to_report(link, LinkStatus.NO_SUCH_PAGE)
@@ -88,23 +104,21 @@ class Crawler(Processor):
             # Don't fetch non text/html pages
             content_type = response.headers.get("Content-Type", "")
             if not content_type.startswith("text/html"):
-                logger.debug(f"skipping fetching the page {url} since Content-Type is "
-                             f"{content_type}")
+                logger.debug(f"Skipping {url} due to non-HTML content type: {content_type}")
                 return None
 
             # Don't fetch pages under other domain
             if not link.url.startswith(self.target_url):
-                logger.debug(f'{link.url} is not under {self.target_url}, so not fetching and parsing page.')
+                logger.debug(f'{link.url} is outside of {self.target_url}, skipping.')
                 return None
 
             # Don't fetch pages is their depth is maximal
             if link.depth == self.max_depth:
-                logger.debug(f'The depth of {link.url} is maximal, so the page itself will not be fetched and '
-                             f'parsed.')
+                logger.debug(f'Depth limit reached for {link.url}')
                 return None
 
             # fetch the page
-            response = self.session.get(url, verify=certifi.where())
+            response = self.session.get(url, verify=verify)
             response.raise_for_status()  # Raise error for 4xx/5xx
             logger.debug(f'Page request successful - {response.status_code}')
 
