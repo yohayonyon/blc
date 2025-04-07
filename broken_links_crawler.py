@@ -2,6 +2,7 @@ import os
 import threading
 import time
 from datetime import datetime
+from loguru import logger
 
 import requests
 
@@ -64,6 +65,9 @@ class BrokenLinksCrawler:
             email_sender = EmailReportSender(self.EMAIL_SENDER, self.EMAIL_PASSWORD, self.email_to)
             email_sender.generate_and_send(self.email_report, self.broken_links, execution_time,
                                            self.crawlers_manager.get_tasks_num(), self.crawlers_num)
+
+        logger.info(f"{visited_urls_num} URLs were visited.")
+        logger.info(f"{len(self.broken_links)} URLs were broken.")
 
     def get_time_delta(self):
         delta = datetime.now() - self.start_time
