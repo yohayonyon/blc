@@ -1,10 +1,8 @@
 import os
 import threading
-import time
 from datetime import datetime
-from loguru import logger
 
-import requests
+from loguru import logger
 
 from crawler import Crawler
 from email_report_sender import EmailReportSender

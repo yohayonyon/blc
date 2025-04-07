@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from loguru import logger
 
 
@@ -9,7 +10,8 @@ class EmailReportSender:
         self.recipient = recipient
 
     def generate_and_send(self, report_file_name, links_list, execution_time, visited_urls_num, thread_num):
-        email_body = self.generate_email_body(report_file_name, links_list, execution_time, visited_urls_num, thread_num)
+        email_body = self.generate_email_body(report_file_name, links_list, execution_time, visited_urls_num,
+                                              thread_num)
         self.send_email_report('blc@blc.org', 'password', email_body)
 
     def send_email_report(self, email, password, report_text):

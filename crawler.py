@@ -3,10 +3,11 @@ from urllib.parse import urlparse, quote, urlunparse
 
 import certifi
 import requests
+import urllib3
 from bs4 import BeautifulSoup
 from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from link import Link, LinkStatus
 from processor import Processor
@@ -80,7 +81,8 @@ class Crawler(Processor):
                 verify = certifi.where()
                 response = self.session.head(url, verify=verify, timeout=10)
                 response.raise_for_status()
-                logger.debug(f'Successfully (status {response.status_code}) fetched header with SSL verification: {url}')
+                logger.debug(
+                    f'Successfully (status {response.status_code}) fetched header with SSL verification: {url}')
 
             # === SSL Error: Retry with verify=False ===
             except requests.exceptions.SSLError as ssl_err:
@@ -89,7 +91,8 @@ class Crawler(Processor):
                     verify = False
                     response = self.session.head(url, verify=verify, timeout=10)
                     response.raise_for_status()
-                    logger.debug(f"Successfully (status {response.status_code}) fetched header without SSL verification: {url}")
+                    logger.debug(
+                        f"Successfully (status {response.status_code}) fetched header without SSL verification: {url}")
                 except requests.exceptions.SSLError as ssl_err:
                     self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"SSL fallback also failed: {ssl_err}")
 

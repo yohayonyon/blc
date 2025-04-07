@@ -73,7 +73,7 @@ class WorkerManager:
 
     def get_tasks_num(self):
         with self.all_tasks_to_process_lock:
-            res =  len(self.all_tasks_to_process)
+            res = len(self.all_tasks_to_process)
         return res
 
     def get_processed_num(self):
