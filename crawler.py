@@ -81,7 +81,7 @@ class Crawler(Processor):
         try:
             try:
                 verify = certifi.where()
-                response = self.session.head(url, verify=verify, timeout=10)
+                response = self.session.head(url, verify=verify, allow_redirects=True, timeout=10)
                 response.raise_for_status()
                 logger.debug(f'Successfully (status {response.status_code}) fetched header with SSL verification: {url}')
             except requests.exceptions.SSLError as ssl_err:
@@ -95,7 +95,7 @@ class Crawler(Processor):
                     self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"SSL fallback also failed: {ssl_err}")
                     return None
 
-            if link.url.startswith("http://") and response.url.startswith("https://"):
+            if url.startswith("http://") and response.url.startswith("https://"):
                 self.add_error_to_report(link, LinkStatus.HTTP_INSTEAD_OF_HTTPS)
 
             content_type = response.headers.get("Content-Type", "")
@@ -111,7 +111,7 @@ class Crawler(Processor):
                 logger.debug(f'Depth limit reached for {link.url}')
                 return None
 
-            response = self.session.get(url, verify=True)
+            response = self.session.get(url, verify=verify)
             response.raise_for_status()
             logger.debug(f'Page request successful - {response.status_code}')
             return response
@@ -119,7 +119,7 @@ class Crawler(Processor):
         except requests.exceptions.RetryError as e:
             self.add_error_to_report(link, LinkStatus.OTHER_ERROR, str(e))
         except requests.exceptions.HTTPError as e:
-            if hasattr(e, "response") and e.response:
+            if hasattr(e, "response"):
                 if e.response.status_code == 404:
                     self.add_error_to_report(link, LinkStatus.NO_SUCH_PAGE)
                 else:
