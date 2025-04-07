@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse, quote, urlunparse
 
 import certifi
 import requests
@@ -8,7 +9,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from link import Link, LinkStatus
 from processor import Processor
-from robots_txt_handler import RobotsTxtHandler
 
 
 def retry_if_not_404(exception):
@@ -18,15 +18,22 @@ def retry_if_not_404(exception):
     )
 
 
-def add_trailing_slash(url):
-    return url if url[-1] == '/' else f'{url}/'
+def normalize_url(url):
+    parsed = urlparse(url)
+    # Encode the domain name using idna
+    netloc = parsed.netloc.encode('idna').decode('ascii')
+    # Percent-encode the path and query
+    path = quote(parsed.path)
+    query = quote(parsed.query, safe='=&')
+    # Reconstruct the URL
+    return urlunparse((parsed.scheme, netloc, path, parsed.params, query, parsed.fragment))
 
 
 class Crawler(Processor):
     session = requests.Session()
 
     def __init__(self, target_url, broken_links, broken_links_lock, max_depth):
-        self.target_url = add_trailing_slash(target_url)
+        self.target_url = normalize_url(target_url)
         self.broken_links = broken_links
         self.broken_links_lock = broken_links_lock
         self.max_depth = max_depth
@@ -76,7 +83,7 @@ class Crawler(Processor):
 
             # Document http instead of https and continue crawling
             if link.url.startswith("http://") and response.url.startswith("https://"):
-                self.add_error_to_report(link, LinkStatus.HTTP_INSTEAD_HTTPS)
+                self.add_error_to_report(link, LinkStatus.HTTP_INSTEAD_OF_HTTPS)
 
             # Don't fetch non text/html pages
             content_type = response.headers.get("Content-Type", "")
@@ -112,7 +119,13 @@ class Crawler(Processor):
             self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"TimeoutError: Request took too long.")
             return None
         except requests.exceptions.ConnectionError as e:
-            if "[Errno 11001] getaddrinfo failed" in str(e.args[0].reason):
+            if os.name == "nt":
+                no_domain_windows_string = "[Errno 11001] getaddrinfo failed"
+            elif os.name == "posix":
+                no_domain_windows_string = "[Errno -2] Name or service not known"
+            else:
+                no_domain_windows_string = ""
+            if no_domain_windows_string in str(e.args[0].reason):
                 self.add_error_to_report(link, LinkStatus.NO_SUCH_DOMAIN)
             else:
                 self.add_error_to_report(link, LinkStatus.OTHER_ERROR, str(e))
@@ -153,7 +166,7 @@ class Crawler(Processor):
                 logger.debug(f'Ignoring {url}')
                 continue
 
-            url = add_trailing_slash(url)
+            url = normalize_url(url)
 
             if url.startswith(f'{current_link.url}#'):
                 logger.debug(f'A new link - other section on the same page was found, so check it and stop.')

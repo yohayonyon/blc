@@ -6,7 +6,7 @@ class LinkStatus(Enum):
     VISITED = 0
     NO_SUCH_DOMAIN = 1
     NO_SUCH_PAGE = 2
-    HTTP_INSTEAD_HTTPS = 3
+    HTTP_INSTEAD_OF_HTTPS = 3
     OTHER_ERROR = 4
 
 
