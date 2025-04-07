@@ -10,7 +10,7 @@ class Report(ABC):
         self,
         file_name: str,
         links: list[Any],
-        execution_time: float,
+        execution_time: str,
         visited_urls_num: int,
         thread_num: int
     ) -> None:

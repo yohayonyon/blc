@@ -14,7 +14,7 @@ class JsonReport(Report):
         self,
         report_file_name: str,
         links_list: List[Link],
-        execution_time: float,
+        execution_time: str,
         visited_urls_num: int,
         thread_num: int
     ) -> None:
@@ -24,7 +24,7 @@ class JsonReport(Report):
         Args:
             report_file_name: Output JSON file name.
             links_list: List of Link objects.
-            execution_time: Total crawl time in seconds.
+            execution_time: TA string of total crawl time.
             visited_urls_num: Number of URLs visited.
             thread_num: Number of threads used.
         """

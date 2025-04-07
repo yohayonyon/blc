@@ -25,7 +25,7 @@ class EmailReportSender:
         self,
         report_file_name: str,
         links_list: List[Link],
-        execution_time: float,
+        execution_time: str,
         visited_urls_num: int,
         thread_num: int
     ) -> None:
