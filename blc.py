@@ -19,57 +19,66 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-t", "--threads", type=int, default=-1, help="Number of threads to execute in parallel")
     parser.add_argument("-d", "--depth", type=int, default=-1, help="Maximum crawl depth")
     parser.add_argument("-s", "--silent", action="store_true", help="Suppress live terminal output")
-    parser.add_argument("-hr", "--human_report", default="report.txt", help="Output file for human-readable report")
-    parser.add_argument("-jr", "--json_report", default="report.json", help="Output file for JSON report")
-    parser.add_argument(
-        "-l", "--log_level",
+    parser.add_argument("-v",
+        "--log_verbosity",
         choices=["none", "trace", "debug", "info", "success", "warning", "error", "critical"],
         default="none",
         help="Log verbosity level"
     )
-    parser.add_argument("-lf", "--log_file", default="", help="Optional log file instead of stdout")
-    parser.add_argument("-e", "--email_to", type=str, help="Destination email address for sending report")
-    parser.add_argument(
-        "-er", "--email_report",
-        choices=["never", "errors", "always"],
-        default="never",
-        help="When to send the report via email"
-    )
+    parser.add_argument("--log_file", default="blc.log", help="Change the log file name from blc.log")
+    parser.add_argument("--human_report", default="report.txt",
+                        help="Change the human-readable report file name from report.txt")
+    parser.add_argument("--json_report", default="report.json",
+                        help="Change the json report file name from report.json")
+    parser.add_argument("--log_display", type=bool, default=False,
+                        help="If set log will be printed also to stdout")
+    parser.add_argument("--email_to", type=str, help="Destination email address for sending report")
+    parser.add_argument( "--email_report_mode", choices=["never", "errors", "always"], default="always",
+                         help="When to send the report via email")
 
     return parser.parse_args()
 
 
-def set_log_level(log_level: str, file_name: Optional[str] = None) -> None:
+def set_log_level(log_level: str, file_name: str, log_to_screen: bool) -> None:
     """
     Set the log level and output destination.
 
     Args:
         log_level: Logging level string.
-        file_name: File to write logs to (optional).
+        file_name: File to write logs to.
+        log_to_screen: Whether to log to the terminal.
     """
     logger.remove()
     if log_level != "none":
-        logger.add(
-            sys.stdout if not file_name else file_name,
-            level=log_level.upper(),
-            format=(
-                "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-                "<level>{level:<1}</level> | "
-                "<cyan>{thread.name:<1}</cyan>:<cyan>{name:<1}</cyan>:"
-                "<cyan>{function:<1}</cyan>:<cyan>{line:<1}</cyan> | {message}"
+        if log_to_screen:
+            logger.add(
+                sys.stdout,
+                level=log_level.upper(),
+                format=(
+                    "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                    "<level>{level:<1}</level> | "
+                    "<cyan>{thread.name:<1}</cyan>:<cyan>{name:<1}</cyan>:"
+                    "<cyan>{function:<1}</cyan>:<cyan>{line:<1}</cyan> | {message}"
+                )
             )
+    logger.add(
+        file_name,
+        level=log_level.upper() if log_level != "none" else "INFO",
+        format=(
+            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+            "<level>{level:<1}</level> | "
+            "<cyan>{thread.name:<1}</cyan>:<cyan>{name:<1}</cyan>:"
+            "<cyan>{function:<1}</cyan>:<cyan>{line:<1}</cyan> | {message}"
         )
+    )
+
 
 
 def main() -> None:
     """Entry point for the CLI application."""
     args = parse_arguments()
 
-    if args.email_report != "never" and not args.email_to:
-        print("You must specify --email_to if you want to send a report.")
-        return
-
-    set_log_level(args.log_level, args.log_file)
+    set_log_level(args.log_verbosity, args.log_file, args.log_display)
 
     report_types = ["human", "json"]
     report_names = [args.human_report, args.json_report]
@@ -81,7 +90,7 @@ def main() -> None:
         silent=args.silent,
         crawlers_num=args.threads,
         max_depth=args.depth,
-        email_report=args.email_report,
+        email_report=args.email_report_mode,
         email_to=args.email_to
     )
     crawler.start()
