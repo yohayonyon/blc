@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software Requirements</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 2em;
+      line-height: 1.6;
+    }
+    h1, h2 {
+      color: #2c3e50;
+    }
+    ol {
+      padding-left: 1.5em;
+    }
+    ol ol {
+      list-style-type: lower-alpha;
+    }
+  </style>
+</head>
+<body>
+  <h1>Software Requirements</h1>
+
+  <h2>1. System Requirements</h2>
+  <ol>
+    <li>The system shall support website scanning and provide a list of all problematic links (as defined below) detected during the scan.</li>
+    <li>The system shall run on a <strong>Linux Ubuntu</strong> environment and be developed using the <strong>Python</strong> programming language.</li>
+    <li>The system shall operate via the <strong>command line</strong> interface, accepting all input data as parameters.</li>
+  </ol>
+
+  <h2>2. Queue Management and Concurrency</h2>
+  <ol>
+    <li>The system shall implement a <strong>Producer-Consumer mechanism</strong> (or a similar solution) for managing the crawl queue.</li>
+    <li>A <strong>locking mechanism</strong> shall be used to prevent concurrency conflicts when accessing the queue.</li>
+    <li>Users shall be able to define the <strong>number of threads</strong> used for link checking.</li>
+    <li>If possible, the system shall automatically detect the number of available CPU cores and adjust concurrency levels accordingly.</li>
+    <li>The system shall <strong>not scan the same URL more than once</strong>.</li>
+  </ol>
+
+  <h2>3. Link Validation and Error Detection</h2>
+  <ol>
+    <li>The system shall detect the following types of errors:
+      <ol>
+        <li><strong>404 Not Found</strong> – Link points to a non-existent file.</li>
+        <li><strong>HTTP to HTTPS Mismatch</strong> – A link redirects from HTTP to HTTPS without proper source configuration.</li>
+        <li><strong>False 200 OK</strong> – A website returns HTTP 200 status, but the content is actually an error page (e.g., WordPress custom 404).</li>
+        <li><strong>403 DNS Error</strong> – Domain name does not exist (DNS resolution failure).</li>
+      </ol>
+    </li>
+    <li>A link is considered <strong>external</strong> if it does not begin with any of the scanned base URLs.</li>
+    <li>For external links, the system shall verify that the link exists but will <strong>not perform a deep scan</strong>.</li>
+  </ol>
+
+  <h2>4. Configuration Parameters</h2>
+  <ol>
+    <li>Number of parallel <strong>threads</strong> to use.</li>
+    <li><strong>Crawl depth</strong> – How many levels deep the crawler should explore.</li>
+    <li><strong>Output format</strong> – Choice of output file format (e.g., JSON or another user-friendly format).</li>
+    <li>Optional: Allow the user to enable or disable <strong>PDF document parsing</strong> to extract links.</li>
+    <li>Output verbosity on screen:
+      <ol>
+        <li><strong>Silent mode</strong> – Suppress all output.</li>
+        <li>Option to print <strong>runtime duration</strong>, <strong>progress updates</strong>, and <strong>diagnostic messages</strong> during execution.</li>
+      </ol>
+    </li>
+  </ol>
+
+  <h2>5. Output and Results</h2>
+  <ol>
+    <li>For each problematic link detected, the output shall include:
+      <ol>
+        <li>The <strong>URL</strong> of the link.</li>
+        <li>The <strong>type of error</strong> detected (as described in Section 3).</li>
+        <li>The <strong>page</strong> on which the link was found.</li>
+      </ol>
+    </li>
+    <li>The output shall include the <strong>total runtime</strong> of the system, presented in <strong>days, hours, minutes, and seconds</strong>.</li>
+  </ol>
+
+  <h2>6. Email Reporting</h2>
+  <ol>
+    <li>The system shall support <strong>sending result reports via email</strong>.</li>
+    <li>The user shall be able to configure when an email report is sent:
+      <ol>
+        <li>Never</li>
+        <li>Only when errors are found</li>
+        <li>Always</li>
+      </ol>
+    </li>
+  </ol>
+
+  <h2>7. Minimum Test Targets</h2>
+  <ol>
+    <li>The software shall be verified to function correctly on at least the following three websites:
+      <ol>
+        <li><a href="https://webee.technion.ac.il/~ayellet/">https://webee.technion.ac.il/~ayellet/</a></li>
+        <li><a href="https://cgm.technion.ac.il/">https://cgm.technion.ac.il/</a></li>
+        <li><a href="https://ece.technion.ac.il/">https://ece.technion.ac.il/</a></li>
+      </ol>
+    </li>
+  </ol>
+</body>
+</html>
