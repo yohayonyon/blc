@@ -78,7 +78,7 @@ class BrokenLinksCrawler:
     @staticmethod
     def init_email_params(email_mode, email_to, email_type, report_types, report_names):
         if email_to:
-            _email_sender = EmailReportSender(email_to)
+            _email_sender = EmailReportSender(email_to, email_type)
             _email_mode = email_mode
             _email_type = email_type
             if email_type not in report_types:
@@ -153,4 +153,4 @@ class BrokenLinksCrawler:
             logger.info(f"Report {report_name} generated.")
 
             if self.email_sender and ((self.email_mode == "errors" and self.broken_links) or self.email_mode == "always") and self.email_type == report_type:
-                self.email_sender.send_email_report(report_body)
+                self.email_sender.send_email_report(report_name)

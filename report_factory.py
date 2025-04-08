@@ -1,6 +1,6 @@
 import enum
 
-from HtmlReport import HtmlReport
+from html_report import HtmlReport
 from human_report import HumanReport
 from json_report import JsonReport
 from report import Report

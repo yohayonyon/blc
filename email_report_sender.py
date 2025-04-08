@@ -1,12 +1,12 @@
 import enum
-from datetime import datetime
-from typing import List
 import os
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
 
 from loguru import logger
-from link import Link
+
 
 class EmailMode(enum.Enum):
     ALWAYS = "always"
@@ -24,15 +24,13 @@ class EmailReportSender:
         "BLC_SENDER_EMAIL_PASSWORD"
     ]
 
-    def __init__(self, recipient: str):
+    def __init__(self, recipient: str, report_type: str):
         """
         Initialize the email sender using environment variables.
 
         Args:
             recipient: Recipient email address.
-
-        Raises:
-            EnvironmentError: If any required environment variable is missing.
+            report_type: Report format - 'human', 'html', or 'json'.
         """
         self._check_required_env_vars()
 
@@ -41,6 +39,7 @@ class EmailReportSender:
         self.sender_email = os.getenv("BLC_SENDER_EMAIL")
         self.sender_password = os.getenv("BLC_SENDER_EMAIL_PASSWORD")
         self.recipient_email = recipient
+        self.report_type = report_type.lower()
 
     def _check_required_env_vars(self) -> None:
         """Validate that all required environment variables are defined."""
@@ -50,17 +49,41 @@ class EmailReportSender:
                 "Missing required environment variables: " + ", ".join(missing_vars)
             )
 
-    def send_email_report(self, report_text: str) -> None:
+    def send_email_report(self, report_path: str) -> None:
         """
-        Send the report via SMTP.
+        Send the report via email. Uses the report path to determine format.
 
         Args:
-            report_text: Plain text report content.
+            report_path: Path to the report file.
         """
-        msg = MIMEText(report_text)
+        msg = MIMEMultipart()
         msg['Subject'] = "Broken Links Crawler Report"
         msg['From'] = self.sender_email
         msg['To'] = self.recipient_email
+
+        match self.report_type:
+            case "human":
+                with open(report_path, "r", encoding="utf-8") as f:
+                    report_text = f.read()
+                msg.attach(MIMEText(report_text, "plain"))
+
+            case "html":
+                with open(report_path, "r", encoding="utf-8") as f:
+                    report_html = f.read()
+                msg.attach(MIMEText(report_html, "html"))
+
+            case "json":
+                with open(report_path, "rb") as f:
+                    part = MIMEApplication(f.read(), _subtype="json")
+                    part.add_header(
+                        "Content-Disposition",
+                        "attachment",
+                        filename=os.path.basename(report_path)
+                    )
+                    msg.attach(part)
+
+            case _:
+                raise ValueError(f"Unsupported report type: {self.report_type}")
 
         with smtplib.SMTP(self.sender_smtp_address, self.sender_smtp_port) as server:
             server.starttls()
@@ -68,51 +91,3 @@ class EmailReportSender:
             server.send_message(msg)
 
         logger.debug("Email sent successfully to {}", self.recipient_email)
-
-    @staticmethod
-    def generate_email_body(
-        report_file_name: str,
-        links_list: List[Link],
-        execution_time: float,
-        visited_urls_num: int,
-        thread_num: int
-    ) -> str:
-        """
-        Generate a plain-text crawler report for email.
-
-        Args:
-            report_file_name: File to save report (currently unused).
-            links_list: List of Link objects.
-            execution_time: Time taken by the crawler.
-            visited_urls_num: Number of visited URLs.
-            thread_num: Number of threads used.
-
-        Returns:
-            str: The full plain-text report.
-        """
-        lines = [
-            "Subject: Crawler Report",
-            "",
-            "Crawler Report",
-            "=" * 60,
-            f"Generated at     : {datetime.utcnow().isoformat()}Z",
-            f"Execution Time   : {execution_time}",
-            f"Visited URLs     : {visited_urls_num}",
-            f"Threads Used     : {thread_num}",
-            "=" * 60,
-            "",
-            "Discovered Links:",
-            "-" * 60
-        ]
-
-        for i, link in enumerate(links_list, start=1):
-            lines.extend([
-                f"[{i}] URL        : {link.url}",
-                f"     Depth       : {link.depth}",
-                f"     Appeared In : {link.first_found_on}",
-                f"     Status      : {link.status.name.lower()}",
-                f"     Error       : {link.error}",
-                "-" * 60
-            ])
-
-        return "\n".join(lines)
