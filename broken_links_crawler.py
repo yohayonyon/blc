@@ -90,7 +90,7 @@ class BrokenLinksCrawler:
             report.generate(report_name, self.broken_links, execution_time, visited_urls_num, self.crawlers_num)
 
         if self.email_to and ((self.email_report == "errors" and self.broken_links) or self.email_report == "always"):
-            email_sender = EmailReportSender(self.EMAIL_SENDER, self.EMAIL_PASSWORD, self.email_to)
+            email_sender = EmailReportSender("config.json", self.email_to)
             email_sender.generate_and_send(
                 self.email_report,
                 self.broken_links,

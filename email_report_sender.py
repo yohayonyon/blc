@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List
-
+import json
 from loguru import logger
 from link import Link
 
@@ -8,17 +8,21 @@ from link import Link
 class EmailReportSender:
     """Handles generation and sending of crawler reports via email."""
 
-    def __init__(self, sender: str, password: str, recipient: str):
+    def __init__(self, config_path: str, recipient: str):
         """
-        Initialize the email sender.
+        Initialize the email sender from a config file.
 
         Args:
-            sender: Sender email address.
-            password: Sender email password.
+            config_path: Path to a JSON config file with email credentials.
             recipient: Recipient email address.
         """
-        self.sender = sender
-        self.password = password
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+
+        self.sender = config.get("EMAIL_SENDER")
+        self.password = config.get("EMAIL_PASSWORD")
+        self.smtp_address = config.get("SMTP_ADDRESS")
+        self.smtp_port = config.get("SMTP_PORT")
         self.recipient = recipient
 
     def generate_and_send(
@@ -61,10 +65,9 @@ class EmailReportSender:
         msg['From'] = self.sender
         msg['To'] = self.recipient
 
-        with smtplib.SMTP('localhost', 1025) as server:  # For local testing
-            # For production SMTP use:
-            # server.starttls()
-            # server.login(self.sender, self.password)
+        with smtplib.SMTP(self.smtp_address, self.smtp_port) as server:
+            server.starttls()
+            server.login(email, password)
             server.send_message(msg)
 
         logger.debug("Email sent.")
