@@ -42,7 +42,7 @@ class BrokenLinksCrawler:
             email_report: When to send email report ("always", "errors", or "never").
             email_to: Recipient email address.
         """
-        self.target_url = target_url if target_url.endswith('/') else f'{target_url}/'
+        self.target_url = target_url
         self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count()
         self.max_depth = max_depth if max_depth != -1 else float("inf")
         self.email_report = email_report
