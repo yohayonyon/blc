@@ -35,9 +35,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--log_display", action="store_true",
                         help="If set log will be printed also to stdout")
     parser.add_argument("--email_to", type=str, help="Destination email address for sending report")
-    parser.add_argument( "--email_mode", choices=f"{get_email_modes()}", default="always",
+    parser.add_argument( "--email_mode", choices=str(get_email_modes()), default="always",
                          help="When to send the report via email")
-    parser.add_argument( "--email_type", choices=f"{get_report_types()}", default="html",
+    parser.add_argument( "--email_type", choices=str(get_report_types()), default="html",
                          help="What type of report to send via email")
 
     return parser.parse_args()
