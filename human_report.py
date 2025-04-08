@@ -11,7 +11,6 @@ class HumanReport(Report):
 
     def generate(
         self,
-        report_file_name: str,
         links_list: List[Link],
         execution_time: str,
         visited_urls_num: int,
@@ -27,23 +26,24 @@ class HumanReport(Report):
             visited_urls_num: Number of visited URLs.
             thread_num: Number of threads used.
         """
-        with open(report_file_name, 'w', encoding='utf-8') as f:
-            f.write("Crawler Report\n")
-            f.write("=" * 60 + "\n")
-            f.write(f"Generated at     : {datetime.utcnow().isoformat()}Z\n")
-            f.write(f"Execution Time   : {execution_time}\n")
-            f.write(f"Visited URLs     : {visited_urls_num}\n")
-            f.write(f"Threads Used     : {thread_num}\n")
-            f.write("=" * 60 + "\n\n")
-            f.write("Discovered Links:\n")
-            f.write("-" * 60 + "\n")
+        report = "Crawler Report\n"
+        report += "=" * 60 + "\n"
+        report += f"Generated at     : {datetime.utcnow().isoformat()}Z\n"
+        report += f"Execution Time   : {execution_time}\n"
+        report += f"Visited URLs     : {visited_urls_num}\n"
+        report += f"Threads Used     : {thread_num}\n"
+        report += "=" * 60 + "\n\n"
+        report += "Discovered Links:\n"
+        report += "-" * 60 + "\n"
 
-            for i, link in enumerate(links_list, start=1):
-                f.write(f"[{i}] URL         : {link.url}\n")
-                f.write(f"     Depth       : {link.depth}\n")
-                f.write(f"     Appeared In : {link.first_found_on}\n")
-                f.write(f"     Status      : {link.status.name.lower()}\n")
-                f.write(f"     Error       : {link.error}\n")
-                f.write("-" * 60 + "\n")
+        for i, link in enumerate(links_list, start=1):
+            report += f"[{i}] URL         : {link.url}\n"
+            report += f"     Depth       : {link.depth}\n"
+            report += f"     Appeared In : {link.first_found_on}\n"
+            report += f"     Status      : {link.status.name.lower()}\n"
+            report += f"     Error       : {link.error}\n"
+            report += "-" * 60 + "\n"
 
-        logger.debug(f"Human-readable report written to: {report_file_name}")
+        logger.info(f"Human-readable report was generated.")
+
+        return report

@@ -6,18 +6,22 @@ from typing import List
 from loguru import logger
 
 from crawler import Crawler
-from email_report_sender import EmailReportSender
+from email_report_sender import EmailReportSender, EmailMode
 from link import Link, LinkStatus
-from report_factory import ReportGenerator
+from report_factory import ReportFactory, ReportType
 from worker_manager import WorkerManager
 
 
+def get_report_types():
+    return [rt.value for rt in list(ReportType)]
+
+
+def get_email_modes():
+    return [em.value for em in list(EmailMode)]
+
 class BrokenLinksCrawler:
     """Main class for running the broken links crawler and generating reports."""
-
-    EMAIL_SENDER = 'blc@blc.org'
-    EMAIL_PASSWORD = 'abcdefgh'
-
+    NUM_OF_THREADS_PER_CORE = 5
     def __init__(
         self,
         target_url: str,
@@ -26,8 +30,9 @@ class BrokenLinksCrawler:
         silent: bool,
         crawlers_num: int,
         max_depth: int,
-        email_report: str,
-        email_to: str
+        email_mode: EmailMode,
+        email_to: str,
+        email_type: ReportType
     ):
         """
         Initialize the BrokenLinksCrawler.
@@ -39,14 +44,16 @@ class BrokenLinksCrawler:
             silent: Whether to disable live console display.
             crawlers_num: Number of crawler threads (-1 to auto-detect).
             max_depth: Maximum crawl depth (-1 for unlimited).
-            email_report: When to send email report ("always", "errors", or "never").
+            email_mode: When to send email report ("always", "errors", or "never").
             email_to: Recipient email address.
         """
+        self.email_sender, self.email_mode, self.email_type =  self.init_email_params(email_mode, email_to, email_type,
+                                                                                      report_types, report_names)
+
         self.target_url = target_url
-        self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count()
+        self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count() * self.NUM_OF_THREADS_PER_CORE
         self.max_depth = max_depth if max_depth != -1 else float("inf")
-        self.email_report = email_report
-        self.email_to = email_to
+
 
         self.broken_links: List[Link] = []
         self.broken_links_lock = threading.Lock()
@@ -68,6 +75,22 @@ class BrokenLinksCrawler:
             threads_num=self.crawlers_num
         )
 
+    @staticmethod
+    def init_email_params(email_mode, email_to, email_type, report_types, report_names):
+        if email_to:
+            _email_sender = EmailReportSender(email_to)
+            _email_mode = email_mode
+            _email_type = email_type
+            if email_type not in report_types:
+                report_types.append(email_type)
+                report_names.append(f"report.{email_type}")
+                logger.info(f"Adding {email_type} report to the list of reports to generate.")
+        else:
+            _email_sender = None
+            _email_mode = None
+            _email_type = None
+        return _email_sender, _email_mode, _email_type
+
     def start(self) -> None:
         """Start the crawling process and generate reports."""
         self.crawlers_manager.start()
@@ -82,22 +105,7 @@ class BrokenLinksCrawler:
             self.stop_live_display = True
             display_thread.join()
 
-        execution_time = self.get_time_delta()
-        visited_urls_num = self.crawlers_manager.get_tasks_num()
-
-        for report_type, report_name in zip(self.report_types, self.report_names):
-            report = ReportGenerator.create_report(report_type)
-            report.generate(report_name, self.broken_links, execution_time, visited_urls_num, self.crawlers_num)
-
-        if self.email_to and ((self.email_report == "errors" and self.broken_links) or self.email_report == "always"):
-            email_sender = EmailReportSender("config.json", self.email_to)
-            email_sender.generate_and_send(
-                self.email_report,
-                self.broken_links,
-                execution_time,
-                visited_urls_num,
-                self.crawlers_num
-            )
+        self.generate_reports_and_email()
 
         msg = (
             f"Execution Time: {self.get_time_delta()}  |  "
@@ -132,3 +140,17 @@ class BrokenLinksCrawler:
             print()
         except KeyboardInterrupt:
             print("\nInterrupted by user.")
+
+    def generate_reports_and_email(self):
+        execution_time = self.get_time_delta()
+        visited_urls_num = self.crawlers_manager.get_tasks_num()
+
+        for report_type, report_name in zip(self.report_types, self.report_names):
+            report = ReportFactory.create_report(report_type)
+            with open(report_name, "w") as f:
+                report_body = report.generate(self.broken_links, execution_time, visited_urls_num, self.crawlers_num)
+                f.write(report_body)
+            logger.info(f"Report {report_name} generated.")
+
+            if self.email_sender and ((self.email_mode == "errors" and self.broken_links) or self.email_mode == "always") and self.email_type == report_type:
+                self.email_sender.send_email_report(report_body)

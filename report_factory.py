@@ -1,9 +1,18 @@
+import enum
+
+from HtmlReport import HtmlReport
 from human_report import HumanReport
 from json_report import JsonReport
 from report import Report
 
 
-class ReportGenerator:
+class ReportType(enum.Enum):
+    HUMAN = "human"
+    JSON = "json"
+    HTML = "html"
+
+
+class ReportFactory:
     """Factory for creating report instances based on type."""
 
     @staticmethod
@@ -18,7 +27,9 @@ class ReportGenerator:
             A report instance.
         """
         match report_type:
-            case "human":
+            case ReportType.HUMAN.value:
                 return HumanReport()
-            case "json":
+            case ReportType.JSON.value:
                 return JsonReport()
+            case ReportType.HTML.value:
+                return HtmlReport()

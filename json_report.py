@@ -12,12 +12,11 @@ class JsonReport(Report):
 
     def generate(
         self,
-        report_file_name: str,
         links_list: List[Link],
         execution_time: str,
         visited_urls_num: int,
         thread_num: int
-    ) -> None:
+    ) -> str | None:
         """
         Generate a JSON report file.
 
@@ -45,7 +44,6 @@ class JsonReport(Report):
                 "error": link.error
             })
 
-        with open(report_file_name, 'w', encoding='utf-8') as f:
-            json.dump(report, f, indent=4)
+            logger.info(f"A JSON report was generated.")
 
-        logger.info(f"A JSON report written to: {report_file_name}")
+        return json.dumps(report, indent=4)

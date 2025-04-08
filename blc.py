@@ -1,9 +1,9 @@
 import argparse
 import sys
-from typing import Optional
+from report_factory import ReportType
 
 from loguru import logger
-from broken_links_crawler import BrokenLinksCrawler
+from broken_links_crawler import BrokenLinksCrawler, get_email_modes, get_report_types
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -26,15 +26,19 @@ def parse_arguments() -> argparse.Namespace:
         help="Log verbosity level"
     )
     parser.add_argument("--log_file", default="blc.log", help="Change the log file name from blc.log")
-    parser.add_argument("--human_report", default="report.txt",
+    parser.add_argument("--human_report_name", default="report.txt",
                         help="Change the human-readable report file name from report.txt")
-    parser.add_argument("--json_report", default="report.json",
+    parser.add_argument("--json_report_name", default="report.json",
                         help="Change the json report file name from report.json")
+    parser.add_argument("--html_report_name", default="report.html",
+                        help="Change the html report file name from report.html")
     parser.add_argument("--log_display", action="store_true",
                         help="If set log will be printed also to stdout")
     parser.add_argument("--email_to", type=str, help="Destination email address for sending report")
-    parser.add_argument( "--email_report_mode", choices=["never", "errors", "always"], default="always",
+    parser.add_argument( "--email_mode", choices=f"{get_email_modes()}", default="always",
                          help="When to send the report via email")
+    parser.add_argument( "--email_type", choices=f"{get_report_types()}", default="html",
+                         help="What type of report to send via email")
 
     return parser.parse_args()
 
@@ -80,8 +84,8 @@ def main() -> None:
 
     set_log_level(args.log_verbosity, args.log_file, args.log_display)
 
-    report_types = ["human", "json"]
-    report_names = [args.human_report, args.json_report]
+    report_types = get_report_types()
+    report_names = [args.human_report_name, args.json_report_name, args.html_report_name]
 
     crawler = BrokenLinksCrawler(
         target_url=args.url,
@@ -90,8 +94,9 @@ def main() -> None:
         silent=args.silent,
         crawlers_num=args.threads,
         max_depth=args.depth,
-        email_report=args.email_report_mode,
-        email_to=args.email_to
+        email_mode=args.email_mode,
+        email_to=args.email_to,
+        email_type=args.email_type
     )
     crawler.start()
 
