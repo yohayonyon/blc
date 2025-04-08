@@ -1,158 +1,87 @@
-# 🕷️ Broken Links Crawler (BLC)
-
-A multithreaded Python crawler that finds **broken links** across websites, reports them in human-readable or JSON formats, and can optionally email the results. Perfect for website audits, SEO checks, or quality assurance tasks.
+# 🕷️ Welcome to the wiki of Broken Links Crawler (BLC)
 
 ---
 
-## 🚀 Features
+## 🔍 Project Overview
 
-- 🔍 Detects broken links (`404`, no domain, HTTPS redirects, etc.)
-- 🌐 Depth-controlled internal/external link crawling
-- ⚙️ Multithreaded (user-defined or auto-scaled)
-- 🧾 Reports in **human-readable** and **JSON** formats
-- 🕒 Report timestamps use the machine's **local timezone**
-- 📧 Optional email reports with SMTP config
-- 📊 Live terminal display (can be silenced)
-- 📄 Also extracts links from PDF files under the same domain
+BLC (Broken Links Crawler) is a Python-based command-line tool developed as part of academic work.
+
+The tool is built to scan websites and detect broken or problematic hyperlinks, addressing practical needs while showcasing key concepts in modern software development — including multithreading, modular design, automation, and robust error handling.
 
 ---
 
-## 📦 Installation
+## ⚡ What BLC Offers
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/yohayonyon/blc
-   cd blc
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Although developed in an academic setting, BLC is a fully functional and production-aware tool. It’s designed to be performant, configurable, and extensible — suitable for use by developers, sysadmins, QA engineers, and anyone responsible for maintaining link integrity across digital content.
 
 ---
 
-## 🧪 Usage
+## ✅ Key Features
 
-```bash
-python blc.py <url> [options]
-```
+- 🚀 **High-performance, multi-threaded crawling**  
+  Utilizes a producer-consumer pattern to efficiently scan sites in parallel.
 
-### Example:
+- 🛑 **Detection of common link issues**:
+  - `404 Not Found`
+  - DNS resolution errors
+  - HTTP to HTTPS mismatches
+  - "False 200 OK" responses (e.g., custom error pages)
 
-```bash
-python blc.py https://example.com -t 8 -d 2 --email_to admin@example.com --email_report_mode errors
-```
+- 🌐 **External link validation**  
+  Ensures referenced external links are reachable, without full recursion.
 
----
+- 🎛️ **Flexible configuration**:
+  - Crawl depth control
+  - Adjustable thread count
+  - Output in `JSON`, `HTML`, or human-readable formats
 
-## 🛠️ CLI Options
+- 📬 **Email-based reporting**  
+  Automatically sends results based on customizable triggers:
+  - Always
+  - Only on error
+  - Never
 
-| Option | Description |
-|--------|-------------|
-| `<url>` | **(Required)** Root URL to begin crawling |
-| `-t`, `--threads` | Number of threads (`-1` for auto) |
-| `-d`, `--depth` | Max crawl depth (`-1` = unlimited) |
-| `-s`, `--silent` | Suppress live progress display |
-| `--log_file` | Set log filename (default: `blc.log`) |
-| `--log_verbosity` | Log level: `none`, `info`, `debug`, etc. |
-| `--log_display` | Also show logs on terminal |
-| `--human_report` | Filename for human report (default: `report.txt`) |
-| `--json_report` | Filename for JSON report (default: `report.json`) |
-| `--email_to` | Recipient email address |
-| `--email_report_mode` | `always`, `errors`, or `never` (when to send report) |
+- 🖥️ **Cross-platform support**
+  - Built for Linux (Ubuntu) and Windows
+  - Can be packaged into a standalone executable (`blc`, `blc.exe`)
 
----
-
-## 🧾 Report Format
-
-### Human-readable (`--human_report`)
-
-```
-Crawler Report
-============================================================
-Generated at     : 2025-04-08 17:22:12 IDT+0300
-Execution Time   : 00:02:43.11
-Visited URLs     : 85
-Threads Used     : 4
-============================================================
-
-Discovered Links:
-------------------------------------------------------------
-[1] URL         : https://example.com/broken-page
-     Depth       : 1
-     Appeared In : https://example.com
-     Status      : no_such_page
-     Error       : HTTPError: 404 - Not Found
-------------------------------------------------------------
-```
-
-### JSON (`--json_report`)
-
-```json
-{
-  "report_generated_at": "2025-04-08T17:22:12 IDT+0300",
-  "execution_time_seconds": "00:02:43.11",
-  "visited_urls": 85,
-  "threads_used": 4,
-  "links": [
-    {
-      "url": "https://example.com/broken-page",
-      "depth": 1,
-      "appeared_in": "https://example.com",
-      "status": "no_such_page",
-      "error": "HTTPError: 404 - Not Found"
-    }
-  ]
-}
-```
+- 🔓 **Open-source & automation-ready**
+  - Easily integrated into CI/CD pipelines, scheduled audits, or link monitoring tools
 
 ---
 
-## 📧 Email Reporting
+## 🎓 Key Concepts and Engineering Guidelines
 
-### Step 1: Create `config.json`
+This project demonstrates:
 
-```json
-{
-  "EMAIL_SENDER": "your_email@example.com",
-  "EMAIL_PASSWORD": "your_app_password",
-  "SMTP_ADDRESS": "smtp.gmail.com",
-  "SMTP_PORT": "587"
-}
-```
+- Clean and modular code structure
+- Effective use of concurrency and thread-safe data structures
+- Real-world exception handling and resilience
+- Compliance with web standards (`robots.txt`, SSL, email protocols)
+- Practical usage of third-party libraries (e.g., `requests`, `certifi`, `PyInstaller`)
 
-### Step 2: Run with email options
-
-```bash
-python blc.py https://example.com --email_to your_email@example.com --email_report_mode always
-```
+BLC serves as a platform to reinforce core software engineering principles while delivering a system with practical, real-world utility.
 
 ---
 
-## 🧠 Architecture
+## 📁 Get Started
 
-- `blc.py` – CLI entry point
-- `broken_links_crawler.py` – Orchestrator
-- `crawler.py` – Core link parser & validator
-- `link.py` – Link & status definitions
-- `worker_manager.py` – Thread pool with deduplication
-- `human_report.py`, `json_report.py` – Reporting classes
-- `email_report_sender.py` – SMTP-based email system
+Visit the [🚀 Command-Line Usage](./🚀-Command‐Line-Usage) page to learn how to configure, run, and customize BLC.
 
----
+Explore the sections - [📊 Initial Software Requirements](./Software-Requirements), [📐 High-Level Design](./High‐Level-Design) to explore the project's origin and architecture.
 
-## 📌 Notes
+Check out [🛠️ Implementation Notes](./🛠%EF%B8%8F-Implementation-Notes) for insights into the tools, technologies, and key implementation decisions.
 
-- The crawler **normalizes and filters URLs**, and skips non-HTML content.
-- Links in **PDFs under the same domain** are also crawled.
-- Broken links are categorized using `LinkStatus` enums for clear reporting.
-- Live progress shows execution time and counts in real time unless `--silent` is used.
+Crawling the web isn’t easy — check out [🐞 Progress and Improvements](./🐞-Crawler-URL-Fetching-Issues-–-Progress-and-Improvements) and [🛠️ The Challenges](./🛠️-Crawler-URL-Fetching-Issues-‐-The-Challenges) to see what was done and achieved.
+
+A discussion on thread number optimization can be found on [🚀 Performance Tuning: Thread Count](./🚀-Performance-Tuning:-Thread-Count).
 
 ---
 
-## 🧑‍💻 License
+## 🧑‍💻 Contribute & Explore
 
-MIT License – feel free to use and modify.
+Feel free to explore or extend the project further. You can find the full source code, issue tracker, and documentation in the [GitHub repository](https://github.com/yohayonyon/blc).
 
 ---
+
+Thank you for visiting — and here’s to chasing broken links, and finishing what we started. 🎓✨
