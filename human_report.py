@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List
 
+import tzlocal
 from loguru import logger
 from report import Report
 from link import Link
@@ -11,6 +12,7 @@ class HumanReport(Report):
 
     def generate(
         self,
+        target_url: str,
         links_list: List[Link],
         execution_time: str,
         visited_urls_num: int,
@@ -20,17 +22,22 @@ class HumanReport(Report):
         Generate a plain text report.
 
         Args:
-            report_file_name: Output text file path.
+            target_url: The site that was crawled.
             links_list: List of Link objects.
             execution_time: A string of the execution time.
             visited_urls_num: Number of visited URLs.
             thread_num: Number of threads used.
         """
+        local_time = datetime.now(tzlocal.get_localzone())
+        formatted_time = local_time.strftime('%Y-%m-%d %H:%M:%S %Z%z')
+
         report = "Crawler Report\n"
         report += "=" * 60 + "\n"
-        report += f"Generated at     : {datetime.utcnow().isoformat()}Z\n"
+        report += f"Generated at     : {formatted_time}\n"
         report += f"Execution Time   : {execution_time}\n"
+        report += f"target URL       : {target_url}\n"
         report += f"Visited URLs     : {visited_urls_num}\n"
+        report += f"Broken URLs      : {len(links_list)}\n"
         report += f"Threads Used     : {thread_num}\n"
         report += "=" * 60 + "\n\n"
         report += "Discovered Links:\n"

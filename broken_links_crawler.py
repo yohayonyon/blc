@@ -153,9 +153,11 @@ class BrokenLinksCrawler:
         for report_type, report_name in zip(self.report_types, self.report_names):
             report = ReportFactory.create_report(report_type)
             with open(report_name, "w") as f:
-                report_body = report.generate(self.broken_links, execution_time, visited_urls_num, self.crawlers_num)
+                report_body = report.generate(self.target_url, self.broken_links, execution_time, visited_urls_num,
+                                              self.crawlers_num)
                 f.write(report_body)
             logger.info(f"Report {report_name} generated.")
 
-            if self.email_sender and ((self.email_mode == "errors" and self.broken_links) or self.email_mode == "always") and self.email_type == report_type:
+            if self.email_sender and ((self.email_mode == "errors" and self.broken_links)
+                                      or self.email_mode == "always") and self.email_type == report_type:
                 self.email_sender.send_email_report(report_name)

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from loguru import logger
@@ -12,6 +12,7 @@ class JsonReport(Report):
 
     def generate(
         self,
+        target_url: str,
         links_list: List[Link],
         execution_time: str,
         visited_urls_num: int,
@@ -21,15 +22,16 @@ class JsonReport(Report):
         Generate a JSON report file.
 
         Args:
-            report_file_name: Output JSON file name.
+            target_url: The site that was crawled.
             links_list: List of Link objects.
             execution_time: TA string of total crawl time.
             visited_urls_num: Number of URLs visited.
             thread_num: Number of threads used.
         """
         report = {
-            "report_generated_at": datetime.utcnow().isoformat() + "Z",
+            "report_generated_at": datetime.now(timezone.utc).isoformat(),
             "execution_time_seconds": execution_time,
+            "target_url": target_url,
             "visited_urls": visited_urls_num,
             "threads_used": thread_num,
             "links": []
