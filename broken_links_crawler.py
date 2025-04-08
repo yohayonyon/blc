@@ -99,8 +99,12 @@ class BrokenLinksCrawler:
                 self.crawlers_num
             )
 
-        logger.info(f"{visited_urls_num} URLs were visited.")
-        logger.info(f"{len(self.broken_links)} URLs were broken.")
+        msg = (
+            f"Execution Time: {self.get_time_delta()}  |  "
+            f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
+            f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
+        )
+        logger.info(f"{msg}")
 
     def get_time_delta(self) -> str:
         """
