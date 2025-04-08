@@ -12,16 +12,21 @@ from report_factory import ReportFactory, ReportType
 from worker_manager import WorkerManager
 
 
-def get_report_types():
-    return [rt.value for rt in list(ReportType)]
+from enum import Enum
 
 
 def get_email_modes():
-    return [em.value for em in list(EmailMode)]
+    return [mode.value for mode in EmailMode]
+
+
+def get_report_types():
+    return [t.value for t in ReportType]
+
 
 class BrokenLinksCrawler:
     """Main class for running the broken links crawler and generating reports."""
     NUM_OF_THREADS_PER_CORE = 5
+
     def __init__(
         self,
         target_url: str,
