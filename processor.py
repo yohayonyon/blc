@@ -24,3 +24,10 @@ class Processor(ABC):
         Finalize the processor (e.g., cleanup or reporting).
         """
         pass
+
+    @abstractmethod
+    def initiate(self) -> None:
+        """
+        Initiate processing
+        """
+        pass

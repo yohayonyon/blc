@@ -34,9 +34,6 @@ def normalize_url(url: str) -> str:
 
 class Crawler(Processor):
     """Crawler class that processes and extracts links from HTML pages."""
-
-    session = requests.Session()
-
     def __init__(self, target_url: str, broken_links: List[Link], broken_links_lock: threading.Lock, max_depth: int):
         """
         Initialize the crawler.
@@ -51,6 +48,7 @@ class Crawler(Processor):
         self.broken_links = broken_links
         self.broken_links_lock = broken_links_lock
         self.max_depth = max_depth
+        self.sessions = dict()
 
     def add_error_to_report(self, link: Link, error_type: LinkStatus, error: str = '') -> None:
         """Set error info for a link and add it to the broken links report."""
@@ -66,12 +64,13 @@ class Crawler(Processor):
         wait=wait_exponential(multiplier=5, min=4, max=5),
         retry=retry_if_exception(retry_if_not_404)
     )
-    def fetch_url(self, link: Link) -> Optional[requests.Response]:
+    def fetch_url(self, link: Link, session) -> Optional[requests.Response]:
         """
         Fetch a page and handle SSL, errors, redirects, and filtering.
 
         Args:
             link: The Link to fetch.
+            session: The per-thread session
 
         Returns:
             A requests.Response object or None.
@@ -81,16 +80,18 @@ class Crawler(Processor):
         try:
             try:
                 verify = certifi.where()
-                response = self.session.head(url, verify=verify, allow_redirects=True, timeout=10)
+                response = session.head(url, verify=verify, allow_redirects=True, timeout=10)
                 response.raise_for_status()
-                logger.debug(f'Successfully (status {response.status_code}) fetched header with SSL verification: {url}')
+                logger.debug(f'Successfully (status {response.status_code}) fetched header with SSL verification: '
+                             f'{url}')
             except requests.exceptions.SSLError as ssl_err:
                 logger.warning(f"SSL verification failed for {url}, retrying without verification: {ssl_err}")
                 try:
                     verify = False
-                    response = self.session.head(url, verify=verify, timeout=10)
+                    response = session.head(url, verify=verify, timeout=10)
                     response.raise_for_status()
-                    logger.debug(f"Successfully (status {response.status_code}) fetched header without SSL verification: {url}")
+                    logger.debug(f"Successfully (status {response.status_code}) fetched header without SSL "
+                                 f"verification: {url}")
                 except requests.exceptions.SSLError as ssl_err:
                     self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"SSL fallback also failed: {ssl_err}")
                     return None
@@ -111,7 +112,7 @@ class Crawler(Processor):
                 logger.debug(f'Depth limit reached for {link.url}')
                 return None
 
-            response = self.session.get(url, verify=verify)
+            response = session.get(url, verify=verify)
             response.raise_for_status()
             logger.debug(f'Page request successful - {response.status_code}')
             return response
@@ -154,7 +155,8 @@ class Crawler(Processor):
             A list of discovered links.
         """
         logger.debug(f'Handling {str(task)}')
-        response = self.fetch_url(task)
+        session = self.sessions[threading.current_thread().name]
+        response = self.fetch_url(task, session)
         return self.parse_and_get_links(response, task) if response else []
 
     def parse_and_get_links(self, response: requests.Response, current_link: Link) -> List[Link]:
@@ -195,3 +197,8 @@ class Crawler(Processor):
     def finalize(self) -> None:
         """Finalize processing (no-op for now)."""
         pass
+
+    def initiate(self) -> None:
+        """initiate processing"""
+        self.sessions[threading.current_thread().name] = requests.Session()
+        logger.debug(f'Created a new sessions. {len(self.sessions)} created so far.')

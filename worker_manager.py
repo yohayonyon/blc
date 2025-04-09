@@ -35,6 +35,8 @@ class WorkerManager:
     def worker(self) -> None:
         """Thread function for processing tasks from the queue."""
         logger.debug("Starting")
+        self.processor.initiate()
+
         while True:
             task = self.task_queue.get()
             if task is None:

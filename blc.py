@@ -91,7 +91,7 @@ def main() -> None:
         target_url=args.url,
         report_types=report_types,
         report_names=report_names,
-        silent=args.silent,
+        silent=True if args.log_display else args.silent,
         crawlers_num=args.threads,
         max_depth=args.depth,
         email_mode=args.email_mode,

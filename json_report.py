@@ -46,6 +46,6 @@ class JsonReport(Report):
                 "error": link.error
             })
 
-            logger.info(f"A JSON report was generated.")
+        logger.info(f"A JSON report was generated.")
 
         return json.dumps(report, indent=4)
