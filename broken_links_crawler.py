@@ -138,7 +138,7 @@ class BrokenLinksCrawler:
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         if self.test_mode:
-            return f"{seconds:.2f}"
+            return f"{total_seconds:.2f}"
         else:
             return f"{int(hours):02}:{int(minutes):02}:{seconds:05.2f}"
 
