@@ -182,13 +182,13 @@ class Crawler(Processor):
             url = normalize_url(url)
 
             if url.startswith(f'{current_link.url}#'):
-                logger.debug('Section on the same page found.')
+                logger.debug(f'Section on the same page found: {url}')
                 found_links.append(Link(url, self.max_depth, current_link.url))
             elif url.startswith(self.target_url):
-                logger.debug('Internal link found.')
+                logger.debug(f'Internal link found: {url}')
                 found_links.append(Link(url, current_link.depth + 1, current_link.url))
             else:
-                logger.debug('External link found.')
+                logger.debug(f'External link found: {url}')
                 found_links.append(Link(url, self.max_depth, current_link.url))
 
         logger.debug(f'Finished parsing. {len(found_links)} links were found.')

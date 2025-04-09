@@ -19,12 +19,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-t", "--threads", type=int, default=-1, help="Number of threads to execute in parallel")
     parser.add_argument("-d", "--depth", type=int, default=-1, help="Maximum crawl depth")
     parser.add_argument("-s", "--silent", action="store_true", help="Suppress live terminal output")
-    parser.add_argument("-v",
-        "--log_verbosity",
-        choices=["none", "trace", "debug", "info", "success", "warning", "error", "critical"],
-        default="none",
-        help="Log verbosity level"
-    )
+    parser.add_argument("-v", "--log_verbosity",
+                        choices=["none", "trace", "debug", "info", "success", "warning", "error", "critical"],
+                        default="none", help="Log verbosity level")
     parser.add_argument("--log_file", default="blc.log", help="Change the log file name from blc.log")
     parser.add_argument("--human_report_name", default="report.txt",
                         help="Change the human-readable report file name from report.txt")
@@ -39,11 +36,13 @@ def parse_arguments() -> argparse.Namespace:
                          help="When to send the report via email")
     parser.add_argument( "--email_type", choices=get_report_types(), default="html",
                          help="What type of report to send via email")
+    parser.add_argument("--test_mode", action="store_true",
+                        help="If set, all log prints will be removed for a special log print.")
 
     return parser.parse_args()
 
 
-def set_log_level(log_level: str, file_name: str, log_to_screen: bool) -> None:
+def set_log_level(log_level: str, file_name: str, log_to_screen: bool, test_mode: bool) -> None:
     """
     Set the log level and output destination.
 
@@ -51,8 +50,16 @@ def set_log_level(log_level: str, file_name: str, log_to_screen: bool) -> None:
         log_level: Logging level string.
         file_name: File to write logs to.
         log_to_screen: Whether to log to the terminal.
+        test_mode: Special log format for testing.
     """
     logger.remove()
+    if test_mode:
+        logger.add(
+            file_name,
+            level="CRITICAL",
+            format="{message}"
+        )
+        return
     if log_level != "none":
         if log_to_screen:
             logger.add(
@@ -77,12 +84,11 @@ def set_log_level(log_level: str, file_name: str, log_to_screen: bool) -> None:
     )
 
 
-
 def main() -> None:
     """Entry point for the CLI application."""
     args = parse_arguments()
 
-    set_log_level(args.log_verbosity, args.log_file, args.log_display)
+    set_log_level(args.log_verbosity, args.log_file, args.log_display, args.test_mode)
 
     report_types = get_report_types()
     report_names = [args.human_report_name, args.json_report_name, args.html_report_name]
@@ -96,7 +102,8 @@ def main() -> None:
         max_depth=args.depth,
         email_mode=args.email_mode,
         email_to=args.email_to,
-        email_type=args.email_type
+        email_type=args.email_type,
+        test_mode=args.test_mode
     )
     crawler.start()
 

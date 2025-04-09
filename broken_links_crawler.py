@@ -11,7 +11,6 @@ from link import Link, LinkStatus
 from report_factory import ReportFactory, ReportType
 from worker_manager import WorkerManager
 
-
 from enum import Enum
 
 
@@ -28,16 +27,17 @@ class BrokenLinksCrawler:
     NUM_OF_THREADS_PER_CORE = 5
 
     def __init__(
-        self,
-        target_url: str,
-        report_types: List[str],
-        report_names: List[str],
-        silent: bool,
-        crawlers_num: int,
-        max_depth: int,
-        email_mode: EmailMode,
-        email_to: str,
-        email_type: ReportType
+            self,
+            target_url: str,
+            report_types: List[str],
+            report_names: List[str],
+            silent: bool,
+            crawlers_num: int,
+            max_depth: int,
+            email_mode: EmailMode,
+            email_to: str,
+            email_type: ReportType,
+            test_mode: bool = False
     ):
         """
         Initialize the BrokenLinksCrawler.
@@ -51,14 +51,14 @@ class BrokenLinksCrawler:
             max_depth: Maximum crawl depth (-1 for unlimited).
             email_mode: When to send email report ("always", "errors", or "never").
             email_to: Recipient email address.
+            test_mode: If set special print for testing are generated
         """
-        self.email_sender, self.email_mode, self.email_type =  self.init_email_params(email_mode, email_to, email_type,
-                                                                                      report_types, report_names)
+        self.email_sender, self.email_mode, self.email_type = self.init_email_params(email_mode, email_to, email_type,
+                                                                                     report_types, report_names)
 
         self.target_url = target_url
         self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count() * self.NUM_OF_THREADS_PER_CORE
         self.max_depth = max_depth if max_depth != -1 else float("inf")
-
 
         self.broken_links: List[Link] = []
         self.broken_links_lock = threading.Lock()
@@ -79,6 +79,8 @@ class BrokenLinksCrawler:
             repeat_task=False,
             threads_num=self.crawlers_num
         )
+
+        self.test_mode = test_mode
 
     @staticmethod
     def init_email_params(email_mode, email_to, email_type, report_types, report_names):
@@ -112,12 +114,17 @@ class BrokenLinksCrawler:
 
         self.generate_reports_and_email()
 
-        msg = (
-            f"Execution Time: {self.get_time_delta()}  |  "
-            f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
-            f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
-        )
-        logger.info(f"{msg}")
+        if self.test_mode:
+            logger.critical(
+                f"{self.target_url},{self.crawlers_num},{self.get_time_delta()},{len(self.broken_links)},"
+                f"{self.crawlers_manager.get_processed_num()},{self.crawlers_manager.get_tasks_num()}")
+        else:
+            msg = (
+                f"Execution Time: {self.get_time_delta()}  |  "
+                f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
+                f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
+            )
+            logger.info(f"{msg}")
 
     def get_time_delta(self) -> str:
         """
@@ -130,13 +137,22 @@ class BrokenLinksCrawler:
         total_seconds = delta.total_seconds()
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        return f"{int(hours):02}:{int(minutes):02}:{seconds:05.2f}"
+        if self.test_mode:
+            return f"{seconds:.2f}"
+        else:
+            return f"{int(hours):02}:{int(minutes):02}:{seconds:05.2f}"
 
     def live_display(self) -> None:
         """Continuously display crawler progress in the console."""
+        if self.test_mode:
+            header = f"TEST_MODE  |  {self.target_url}  |  {self.crawlers_num} threads  |  "
+        else:
+            header = ""
+
         try:
             while not self.stop_live_display:
                 msg = (
+                    f"{header}"
                     f"Execution Time: {self.get_time_delta()}  |  "
                     f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
                     f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
