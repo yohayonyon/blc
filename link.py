@@ -16,12 +16,12 @@ class Link:
     """Represents a link with metadata and status."""
 
     def __init__(
-        self,
-        url: str,
-        depth: int,
-        first_found_on: str,
-        status: LinkStatus = LinkStatus.NOT_VISITED,
-        error: str = ''
+            self,
+            url: str,
+            depth: int,
+            first_found_on: str,
+            status: LinkStatus = LinkStatus.NOT_VISITED,
+            error: str = ''
     ):
         """
         Initialize a Link object.

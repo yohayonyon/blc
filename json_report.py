@@ -3,20 +3,21 @@ from datetime import datetime, timezone
 from typing import List
 
 from loguru import logger
-from report import Report
+
 from link import Link
+from report import Report
 
 
 class JsonReport(Report):
     """Generates a JSON report from crawled link data."""
 
     def generate(
-        self,
-        target_url: str,
-        links_list: List[Link],
-        execution_time: str,
-        visited_urls_num: int,
-        thread_num: int
+            self,
+            target_url: str,
+            links_list: List[Link],
+            execution_time: str,
+            visited_urls_num: int,
+            thread_num: int
     ) -> str | None:
         """
         Generate a JSON report file.

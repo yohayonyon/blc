@@ -1,22 +1,23 @@
-from typing import Any, List
+import html
 from datetime import datetime
+from typing import Any, List
+
 import tzlocal
 
-from report import Report  # Adjust if Report is defined elsewhere
 from link import Link  # Assuming Link has: url, depth, first_found_on, status, error
-import html
+from report import Report  # Adjust if Report is defined elsewhere
 
 
 class HtmlReport(Report):
     """Generates a crawler report in HTML format."""
 
     def generate(
-        self,
-        target_url: str,
-        links: List[Any],
-        execution_time: str,
-        visited_urls_num: int,
-        thread_num: int
+            self,
+            target_url: str,
+            links: List[Any],
+            execution_time: str,
+            visited_urls_num: int,
+            thread_num: int
     ) -> str:
         """
         Generate an HTML report and save it to a file.
@@ -34,12 +35,12 @@ class HtmlReport(Report):
 
     @staticmethod
     def _build_html(
-        target_url: str,
-        links: List[Link],
-        execution_time: str,
-        visited_urls_num: int,
-        thread_num: int,
-        generated_at: str
+            target_url: str,
+            links: List[Link],
+            execution_time: str,
+            visited_urls_num: int,
+            thread_num: int,
+            generated_at: str
     ) -> str:
         """Build the full HTML content as a string."""
         escaped_target_url = html.escape(target_url)

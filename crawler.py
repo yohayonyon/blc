@@ -1,7 +1,7 @@
 import os
 import threading
-from urllib.parse import urlparse, quote, urlunparse
 from typing import List, Optional
+from urllib.parse import urlparse, quote, urlunparse
 
 import certifi
 import requests
@@ -34,6 +34,7 @@ def normalize_url(url: str) -> str:
 
 class Crawler(Processor):
     """Crawler class that processes and extracts links from HTML pages."""
+
     def __init__(self, target_url: str, broken_links: List[Link], broken_links_lock: threading.Lock, max_depth: int):
         """
         Initialize the crawler.
@@ -124,7 +125,8 @@ class Crawler(Processor):
                 if e.response.status_code == 404:
                     self.add_error_to_report(link, LinkStatus.NO_SUCH_PAGE)
                 else:
-                    self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"HTTPError: {e.response.status_code} - {e.response.reason}")
+                    self.add_error_to_report(link, LinkStatus.OTHER_ERROR,
+                                             f"HTTPError: {e.response.status_code} - {e.response.reason}")
         except requests.exceptions.Timeout:
             self.add_error_to_report(link, LinkStatus.OTHER_ERROR, "TimeoutError: Request took too long.")
         except requests.exceptions.ConnectionError as e:

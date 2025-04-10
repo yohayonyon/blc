@@ -11,8 +11,6 @@ from link import Link, LinkStatus
 from report_factory import ReportFactory, ReportType
 from worker_manager import WorkerManager
 
-from enum import Enum
-
 
 def get_email_modes():
     return [mode.value for mode in EmailMode]

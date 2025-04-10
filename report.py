@@ -7,12 +7,12 @@ class Report(ABC):
 
     @abstractmethod
     def generate(
-        self,
-        target_url: str,
-        links: list[Any],
-        execution_time: str,
-        visited_urls_num: int,
-        thread_num: int
+            self,
+            target_url: str,
+            links: list[Any],
+            execution_time: str,
+            visited_urls_num: int,
+            thread_num: int
     ) -> str:
         """
         Generate a report and save it to a file.

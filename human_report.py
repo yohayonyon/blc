@@ -3,20 +3,21 @@ from typing import List
 
 import tzlocal
 from loguru import logger
-from report import Report
+
 from link import Link
+from report import Report
 
 
 class HumanReport(Report):
     """Generates a human-readable text report from crawled link data."""
 
     def generate(
-        self,
-        target_url: str,
-        links_list: List[Link],
-        execution_time: str,
-        visited_urls_num: int,
-        thread_num: int
+            self,
+            target_url: str,
+            links_list: List[Link],
+            execution_time: str,
+            visited_urls_num: int,
+            thread_num: int
     ) -> None:
         """
         Generate a plain text report.
