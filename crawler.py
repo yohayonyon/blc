@@ -1,4 +1,5 @@
 import os
+import platform
 import threading
 from typing import List, Optional
 from urllib.parse import urlparse, quote, urlunparse
@@ -10,10 +11,11 @@ from bs4 import BeautifulSoup
 from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 from link import Link, LinkStatus
 from processor import Processor
+
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def retry_if_not_404(exception: Exception) -> bool:
@@ -131,8 +133,11 @@ class Crawler(Processor):
             self.add_error_to_report(link, LinkStatus.OTHER_ERROR, "TimeoutError: Request took too long.")
         except requests.exceptions.ConnectionError as e:
             no_domain_str = {
-                "nt": "[Errno 11001] getaddrinfo failed",
-                "posix": "[Errno -2] Name or service not known"
+                "nt": "[Errno 11001] getaddrinfo failed",  # Windows
+                "posix": "[Errno -2] Name or service not known",  # Linux/macOS
+                "java": "[Errno 7] nodename nor servname provided, or not known",  # Jython or Java environments
+                "os2": "[Errno 1001] Host not found",  # OS/2
+                "ce": "[Errno 11001] getaddrinfo failed",  # Windows CE
             }.get(os.name, "")
             if no_domain_str in str(e.args[0].reason):
                 self.add_error_to_report(link, LinkStatus.NO_SUCH_DOMAIN)
@@ -201,6 +206,26 @@ class Crawler(Processor):
         pass
 
     def initiate(self) -> None:
-        """initiate processing"""
-        self.sessions[threading.current_thread().name] = requests.Session()
-        logger.debug(f'Created a new sessions. {len(self.sessions)} created so far.')
+        """Initiate processing and configure session with OS-aware browser-like headers."""
+        system = platform.system()
+        if system == "Windows":
+            os_info = "Windows NT 10.0; Win64; x64"
+        elif system == "Darwin":  # macOS
+            os_info = "Macintosh; Intel Mac OS X 10_15_7"
+        elif system == "Linux":
+            os_info = "X11; Linux x86_64"
+        else:
+            os_info = "X11; Unknown OS"
+
+        user_agent = (
+            f"Mozilla/5.0 ({os_info}) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        )
+
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": user_agent
+        })
+        self.sessions[threading.current_thread().name] = session
+        logger.debug(f'Created session with User-Agent for {system}: {user_agent}')
