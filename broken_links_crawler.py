@@ -20,39 +20,39 @@ def get_report_types():
     return [t.value for t in ReportType]
 
 
+class EmailParams:
+    def __init__(self, email_mode, email_to, email_type, report_types, report_names):
+        self.sender = None
+        self.mode = None
+        self.report_type = None
+
+        if email_to:
+            self.sender = EmailReportSender(email_to, email_type)
+            self.mode = email_mode
+            self.report_type = email_type
+            if email_type not in report_types:
+                report_types.append(email_type)
+                report_names.append(f"report.{email_type}")
+                logger.info(f"Adding {email_type} report to the list of reports to generate.")
+
+
 class BrokenLinksCrawler:
-    """Main class for running the broken links crawler and generating reports."""
     NUM_OF_THREADS_PER_CORE = 5
 
     def __init__(
-            self,
-            target_url: str,
-            report_types: List[str],
-            report_names: List[str],
-            silent: bool,
-            crawlers_num: int,
-            max_depth: int,
-            email_mode: EmailMode,
-            email_to: str,
-            email_type: ReportType,
-            test_mode: bool = False
+        self,
+        target_url: str,
+        report_types: List[str],
+        report_names: List[str],
+        silent: bool,
+        crawlers_num: int,
+        max_depth: int,
+        email_mode: EmailMode,
+        email_to: str,
+        email_type: ReportType,
+        test_mode: bool = False
     ):
-        """
-        Initialize the BrokenLinksCrawler.
-
-        Args:
-            target_url: Root URL to crawl.
-            report_types: List of report types to generate.
-            report_names: Corresponding list of report file names.
-            silent: Whether to disable live console display.
-            crawlers_num: Number of crawler threads (-1 to auto-detect).
-            max_depth: Maximum crawl depth (-1 for unlimited).
-            email_mode: When to send email report ("always", "errors", or "never").
-            email_to: Recipient email address.
-            test_mode: If set special print for testing are generated
-        """
-        self.email_sender, self.email_mode, self.email_type = self.init_email_params(email_mode, email_to, email_type,
-                                                                                     report_types, report_names)
+        self.email_params = EmailParams(email_mode, email_to, email_type, report_types, report_names)
 
         self.target_url = target_url
         self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count() * self.NUM_OF_THREADS_PER_CORE
@@ -60,7 +60,6 @@ class BrokenLinksCrawler:
 
         self.broken_links: List[Link] = []
         self.broken_links_lock = threading.Lock()
-
         self.crawler = Crawler(self.target_url, self.broken_links, self.broken_links_lock, self.max_depth)
 
         self.report_types = report_types
@@ -80,24 +79,7 @@ class BrokenLinksCrawler:
 
         self.test_mode = test_mode
 
-    @staticmethod
-    def init_email_params(email_mode, email_to, email_type, report_types, report_names):
-        if email_to:
-            _email_sender = EmailReportSender(email_to, email_type)
-            _email_mode = email_mode
-            _email_type = email_type
-            if email_type not in report_types:
-                report_types.append(email_type)
-                report_names.append(f"report.{email_type}")
-                logger.info(f"Adding {email_type} report to the list of reports to generate.")
-        else:
-            _email_sender = None
-            _email_mode = None
-            _email_type = None
-        return _email_sender, _email_mode, _email_type
-
     def start(self) -> None:
-        """Start the crawling process and generate reports."""
         self.crawlers_manager.start()
 
         if not self.silent:
@@ -135,17 +117,11 @@ class BrokenLinksCrawler:
         total_seconds = delta.total_seconds()
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        if self.test_mode:
-            return f"{total_seconds:.2f}"
-        else:
-            return f"{int(hours):02}:{int(minutes):02}:{seconds:05.2f}"
+        return f"{total_seconds:.2f}" if self.test_mode else f"{int(hours):02}:{int(minutes):02}:{seconds:05.2f}"
 
     def live_display(self) -> None:
         """Continuously display crawler progress in the console."""
-        if self.test_mode:
-            header = f"TEST_MODE  |  {self.target_url}  |  {self.crawlers_num} threads  |  "
-        else:
-            header = ""
+        header = f"TEST_MODE  |  {self.target_url}  |  {self.crawlers_num} threads  |  " if self.test_mode else ""
 
         try:
             while not self.stop_live_display:
@@ -172,6 +148,6 @@ class BrokenLinksCrawler:
                 f.write(report_body)
             logger.info(f"Report {report_name} generated.")
 
-            if self.email_sender and ((self.email_mode == "errors" and self.broken_links)
-                                      or self.email_mode == "always") and self.email_type == report_type:
-                self.email_sender.send_email_report(report_name)
+            if self.email_params.sender and ((self.email_params.mode == "errors" and self.broken_links)
+                                             or self.email_params.mode == "always") and self.email_params.report_type == report_type:
+                self.email_params.sender.send_email_report(report_name)
