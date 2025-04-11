@@ -1,6 +1,7 @@
 import os
 import threading
 from datetime import datetime
+from time import sleep
 from typing import List
 
 from loguru import logger
@@ -119,22 +120,28 @@ class BrokenLinksCrawler:
         minutes, seconds = divmod(remainder, 60)
         return f"{total_seconds:.2f}" if self.test_mode else f"{int(hours):02}:{int(minutes):02}:{seconds:05.2f}"
 
+    def print_status(self, header):
+        msg = (
+            f"{header}"
+            f"Execution Time: {self.get_time_delta()}  |  "
+            f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
+            f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
+        )
+        print(f"\r{msg}", end='', flush=True)
+
     def live_display(self) -> None:
         """Continuously display crawler progress in the console."""
         header = f"TEST_MODE  |  {self.target_url}  |  {self.crawlers_num} threads  |  " if self.test_mode else ""
 
         try:
             while not self.stop_live_display:
-                msg = (
-                    f"{header}"
-                    f"Execution Time: {self.get_time_delta()}  |  "
-                    f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
-                    f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
-                )
-                print(f"\r{msg}", end='', flush=True)
-            print()
+                self.print_status(header)
+                sleep(0.1)
         except KeyboardInterrupt:
             print("\nInterrupted by user.")
+
+        self.print_status(header)
+        print()
 
     def generate_reports_and_email(self):
         execution_time = self.get_time_delta()
