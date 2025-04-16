@@ -38,6 +38,8 @@ def parse_arguments() -> argparse.Namespace:
                          help="What type of report to send via email")
     parser.add_argument("--test_mode", action="store_true",
                         help="If set, all log prints will be removed for a special log print.")
+    parser.add_argument("--email_config", type=str, default="email_config.json",
+                        help="Path to the email configuration JSON file.")
 
     return parser.parse_args()
 
