@@ -1,4 +1,5 @@
 import enum
+import json
 import os
 import smtplib
 from email.mime.application import MIMEApplication
@@ -16,38 +17,28 @@ class EmailMode(enum.Enum):
 
 class EmailReportSender:
     """Handles the generation and sending of crawler reports via email."""
+    def __init__(self, recipient_email: str, report_type, config_path="email_config.json"):
+        self.recipient_email = recipient_email
+        self.report_type = report_type
+        self.config_path = config_path
 
-    REQUIRED_ENV_VARS = [
-        "BLC_SENDER_SMTP_ADDRESS",
-        "BLC_SENDER_SMTP_PORT",
-        "BLC_SENDER_EMAIL",
-        "BLC_SENDER_EMAIL_PASSWORD"
-    ]
+        self._load_config()
 
-    def __init__(self, recipient: str, report_type: str):
-        """
-        Initialize the email sender using environment variables.
+    def _load_config(self):
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"Email config file '{self.config_path}' not found.")
 
-        Args:
-            recipient: Recipient email address.
-            report_type: Report format - 'human', 'html', or 'json'.
-        """
-        self._check_required_env_vars()
+        with open(self.config_path, "r") as f:
+            config = json.load(f)
 
-        self.sender_smtp_address = os.getenv("BLC_SENDER_SMTP_ADDRESS")
-        self.sender_smtp_port = int(os.getenv("BLC_SENDER_SMTP_PORT"))
-        self.sender_email = os.getenv("BLC_SENDER_EMAIL")
-        self.sender_password = os.getenv("BLC_SENDER_EMAIL_PASSWORD")
-        self.recipient_email = recipient
-        self.report_type = report_type.lower()
+        self.smtp_address = config.get("smtp_address")
+        self.smtp_port = int(config.get("smtp_port", 587))
+        self.sender_email = config.get("sender_email")
+        self.sender_password = config.get("sender_password")
 
-    def _check_required_env_vars(self) -> None:
-        """Validate that all required environment variables are defined."""
-        missing_vars = [var for var in self.REQUIRED_ENV_VARS if os.getenv(var) is None]
-        if missing_vars:
-            raise EnvironmentError(
-                "Missing required environment variables: " + ", ".join(missing_vars)
-            )
+        missing = [k for k in ["smtp_address", "smtp_port", "sender_email", "sender_password"] if not config.get(k)]
+        if missing:
+            raise ValueError(f"Missing email config values: {', '.join(missing)}")
 
     def send_email_report(self, report_path: str) -> None:
         """
@@ -85,7 +76,7 @@ class EmailReportSender:
             case _:
                 raise ValueError(f"Unsupported report type: {self.report_type}")
 
-        with smtplib.SMTP(self.sender_smtp_address, self.sender_smtp_port) as server:
+        with smtplib.SMTP(self.smtp_address, self.smtp_port) as server:
             server.starttls()
             server.login(self.sender_email, self.sender_password)
             server.send_message(msg)
