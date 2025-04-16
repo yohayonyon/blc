@@ -23,14 +23,14 @@ def parse_arguments() -> argparse.Namespace:
                         choices=["none", "trace", "debug", "info", "success", "warning", "error", "critical"],
                         default="none", help="Log verbosity level")
     parser.add_argument("--log_file", default="blc.log", help="Change the log file name from blc.log")
+    parser.add_argument("--log_display", action="store_true",
+                        help="If set log will be printed also to stdout")
     parser.add_argument("--text_report", default="report.txt",
                         help="Change the text report file name from report.txt")
     parser.add_argument("--json_report", default="report.json",
                         help="Change the json report file name from report.json")
     parser.add_argument("--html_report", default="report.html",
                         help="Change the html report file name from report.html")
-    parser.add_argument("--log_display", action="store_true",
-                        help="If set log will be printed also to stdout")
     parser.add_argument("--email_to", type=str, help="Destination email address for sending report")
     parser.add_argument( "--email_mode", choices=get_email_modes(), default="always",
                          help="When to send the report via email")
