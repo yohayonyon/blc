@@ -1,4 +1,3 @@
-import os
 import threading
 from datetime import datetime
 from time import sleep
@@ -38,7 +37,7 @@ class EmailParams:
 
 
 class BrokenLinksCrawler:
-    NUM_OF_THREADS_PER_CORE = 5
+    DEFAULT_THREADS_NUM = 25
 
     def __init__(
         self,
@@ -56,7 +55,7 @@ class BrokenLinksCrawler:
         self.email_params = EmailParams(email_mode, email_to, email_type, report_types, report_names)
 
         self.target_url = target_url
-        self.crawlers_num = crawlers_num if crawlers_num != -1 else os.cpu_count() * self.NUM_OF_THREADS_PER_CORE
+        self.crawlers_num = crawlers_num if crawlers_num != -1 else self.DEFAULT_THREADS_NUM
         self.max_depth = max_depth if max_depth != -1 else float("inf")
 
         self.broken_links: List[Link] = []
