@@ -92,13 +92,13 @@ class BrokenLinksCrawler:
             self.stop_live_display = True
             display_thread.join()
 
-        self.generate_reports_and_email()
-
         if self.test_mode:
             logger.critical(
                 f"{self.target_url},{self.crawlers_num},{self.get_time_delta()},{len(self.broken_links)},"
                 f"{self.crawlers_manager.get_processed_num()},{self.crawlers_manager.get_tasks_num()}")
         else:
+            self.generate_reports_and_email()
+
             msg = (
                 f"Execution Time: {self.get_time_delta()}  |  "
                 f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
