@@ -23,23 +23,23 @@ def parse_arguments() -> argparse.Namespace:
                         choices=["none", "trace", "debug", "info", "success", "warning", "error", "critical"],
                         default="none", help="Log verbosity level")
     parser.add_argument("--log_file", default="blc.log", help="Change the log file name from blc.log")
-    parser.add_argument("--human_report_name", default="report.txt",
-                        help="Change the human-readable report file name from report.txt")
-    parser.add_argument("--json_report_name", default="report.json",
+    parser.add_argument("--text_report", default="report.txt",
+                        help="Change the text report file name from report.txt")
+    parser.add_argument("--json_report", default="report.json",
                         help="Change the json report file name from report.json")
-    parser.add_argument("--html_report_name", default="report.html",
+    parser.add_argument("--html_report", default="report.html",
                         help="Change the html report file name from report.html")
     parser.add_argument("--log_display", action="store_true",
                         help="If set log will be printed also to stdout")
     parser.add_argument("--email_to", type=str, help="Destination email address for sending report")
     parser.add_argument( "--email_mode", choices=get_email_modes(), default="always",
                          help="When to send the report via email")
-    parser.add_argument( "--email_type", choices=get_report_types(), default="html",
+    parser.add_argument("--email_type", choices=get_report_types(), default="html",
                          help="What type of report to send via email")
-    parser.add_argument("--test_mode", action="store_true",
-                        help="If set, all log prints will be removed for a special log print.")
     parser.add_argument("--email_config", type=str, default="email_config.json",
                         help="Path to the email configuration JSON file.")
+    parser.add_argument("--test_mode", action="store_true",
+                        help="If set, all log prints will be removed for a special log print.")
 
     return parser.parse_args()
 
@@ -93,7 +93,7 @@ def main() -> None:
     set_log_level(args.log_verbosity, args.log_file, args.log_display, args.test_mode)
 
     report_types = get_report_types()
-    report_names = [args.human_report_name, args.json_report_name, args.html_report_name]
+    report_names = [args.text_report, args.json_report, args.html_report]
 
     crawler = BrokenLinksCrawler(
         target_url=args.url,
