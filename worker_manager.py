@@ -44,9 +44,9 @@ class WorkerManager:
                 break
 
             try:
-                new_tasks = self.processor.process(task)
                 with self.processed_counter_lock:
                     self.processed_counter += 1
+                new_tasks = self.processor.process(task)
             except Exception as e:
                 logger.error(f"Error: {e}")
                 self.task_queue.task_done()
