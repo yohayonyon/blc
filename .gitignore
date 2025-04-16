@@ -1,9 +1,12 @@
-venv
-.idea
-__pycache__
-*.json
-*.html
-*.txt
-*.log
-*.iml
-*.xml
+# Ignore everything
+*
+
+# But not these (negation)
+!*.py
+!*/dist/blc.exe
+
+# Also, don't ignore directories (so Git can access the .py files inside them)
+!*/
+
+# Optionally, don’t ignore this .gitignore file itself
+!.gitignore
