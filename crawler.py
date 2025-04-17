@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import threading
@@ -52,6 +53,26 @@ class Crawler(Processor):
         self.broken_links_lock = broken_links_lock
         self.max_depth = max_depth
         self.sessions = dict()
+        self.non_crawling_domains = self._load_non_crawling_domains()
+
+    @staticmethod
+    def _load_non_crawling_domains():
+        try:
+            with open('non_crawling_urls.json', 'r') as f:
+                data = json.load(f)
+                return set(data.get('domains', []))
+        except Exception as e:
+            logger.warning(f"Could not load non-crawling domains list: {e}")
+            return set()
+
+    def _is_known_non_crawling(self, url: str) -> bool:
+        try:
+            parsed = urlparse(url)
+            hostname = parsed.hostname or ""
+            return any(domain in hostname for domain in self.non_crawling_domains)
+        except Exception as e:
+            logger.debug(f"Error parsing URL in _is_known_non_crawling: {e}")
+            return False
 
     def add_error_to_report(self, link: Link, error_type: LinkStatus, error: str = '') -> None:
         """Set error info for a link and add it to the broken links report."""
@@ -109,6 +130,10 @@ class Crawler(Processor):
 
             if not link.url.startswith(self.target_url):
                 logger.debug(f'{link.url} is outside of {self.target_url}, skipping.')
+                return None
+
+            if self._is_known_non_crawling(url):
+                logger.debug(f'{link.url} is known as non-crawler friendly, skipping.')
                 return None
 
             if link.depth == self.max_depth:
