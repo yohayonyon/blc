@@ -2,8 +2,11 @@ import json
 import os
 import platform
 import threading
+import time
+from collections import defaultdict
 from typing import List, Optional
 from urllib.parse import urlparse, quote, urlunparse
+from urllib.robotparser import RobotFileParser
 
 import certifi
 import requests
@@ -15,45 +18,32 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from link import Link, LinkStatus
 from processor import Processor
 
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
 def retry_if_not_404(exception: Exception) -> bool:
-    """Retry if the exception is a request exception but not a 404 error."""
     return isinstance(exception, requests.exceptions.RequestException) and (
         not (hasattr(exception.response, "status_code") and exception.response.status_code == 404)
     )
 
-
 def normalize_url(url: str) -> str:
-    """Normalize and encode a URL."""
     parsed = urlparse(url)
     netloc = parsed.netloc.encode('idna').decode('ascii')
     path = quote(parsed.path)
     query = quote(parsed.query, safe='=&')
     return urlunparse((parsed.scheme, netloc, path, parsed.params, query, parsed.fragment))
 
-
 class Crawler(Processor):
-    """Crawler class that processes and extracts links from HTML pages."""
-
     def __init__(self, target_url: str, broken_links: List[Link], broken_links_lock: threading.Lock, max_depth: int):
-        """
-        Initialize the crawler.
-
-        Args:
-            target_url: Root URL to crawl.
-            broken_links: Shared list to store broken links.
-            broken_links_lock: Thread-safe lock for the broken links list.
-            max_depth: Max crawl depth allowed.
-        """
         self.target_url = normalize_url(target_url)
         self.broken_links = broken_links
         self.broken_links_lock = broken_links_lock
         self.max_depth = max_depth
         self.sessions = dict()
         self.non_crawling_domains = self._load_non_crawling_domains()
+        self.domain_last_access = dict()
+        self.crawl_delays = dict()
+        self.robots_parsers = dict()
+        self.domain_locks = defaultdict(threading.Lock)
 
     @staticmethod
     def _load_non_crawling_domains():
@@ -74,8 +64,44 @@ class Crawler(Processor):
             logger.debug(f"Error parsing URL in _is_known_non_crawling: {e}")
             return False
 
+    def _get_robots_parser(self, domain: str) -> RobotFileParser:
+        if domain in self.robots_parsers:
+            return self.robots_parsers[domain]
+
+        robots_url = f"https://{domain}/robots.txt"
+        parser = RobotFileParser()
+        parser.set_url(robots_url)
+        try:
+            parser.read()
+            self.robots_parsers[domain] = parser
+        except Exception as e:
+            logger.debug(f"Could not read robots.txt for {domain}: {e}")
+            parser = RobotFileParser()
+            parser.parse("")  # Empty rules (allow all)
+            self.robots_parsers[domain] = parser
+        return parser
+
+    def _get_crawl_delay(self, domain: str) -> float:
+        if domain in self.crawl_delays:
+            return self.crawl_delays[domain]
+
+        parser = self._get_robots_parser(domain)
+        delay = parser.crawl_delay("*")
+        self.crawl_delays[domain] = delay if delay is not None else 0
+        return self.crawl_delays[domain]
+
+    def _respect_crawl_delay(self, domain: str):
+        with self.domain_locks[domain]:
+            delay = self._get_crawl_delay(domain)
+            last_access = self.domain_last_access.get(domain, 0)
+            now = time.time()
+            wait_time = (last_access + delay) - now
+            if wait_time > 0:
+                logger.debug(f"[{domain}] Sleeping {wait_time:.2f}s due to crawl-delay of {delay}s")
+                time.sleep(wait_time)
+            self.domain_last_access[domain] = time.time()
+
     def add_error_to_report(self, link: Link, error_type: LinkStatus, error: str = '') -> None:
-        """Set error info for a link and add it to the broken links report."""
         link.status = error_type
         link.error = error
         log_fn = logger.error if error_type == LinkStatus.OTHER_ERROR else logger.debug
@@ -89,17 +115,10 @@ class Crawler(Processor):
         retry=retry_if_exception(retry_if_not_404)
     )
     def fetch_url(self, link: Link, session) -> Optional[requests.Response]:
-        """
-        Fetch a page and handle SSL, errors, redirects, and filtering.
-
-        Args:
-            link: The Link to fetch.
-            session: The per-thread session
-
-        Returns:
-            A requests.Response object or None.
-        """
         url = link.url
+        parsed = urlparse(url)
+        domain = parsed.netloc
+        self._respect_crawl_delay(domain)
 
         try:
             try:
@@ -177,31 +196,12 @@ class Crawler(Processor):
         return None
 
     def process(self, task: Link) -> List[Link]:
-        """
-        Process a link and return new links to crawl.
-
-        Args:
-            task: The link to process.
-
-        Returns:
-            A list of discovered links.
-        """
         logger.debug(f'Handling {str(task)}')
         session = self.sessions[threading.current_thread().name]
         response = self.fetch_url(task, session)
         return self.parse_and_get_links(response, task) if response else []
 
     def parse_and_get_links(self, response: requests.Response, current_link: Link) -> List[Link]:
-        """
-        Extract links from a page.
-
-        Args:
-            response: Fetched HTML response.
-            current_link: The link being processed.
-
-        Returns:
-            A list of new Link objects.
-        """
         logger.debug(f'Parsing {current_link.url}')
         soup = BeautifulSoup(response.content, "html.parser", from_encoding="iso-8859-1")
         found_links: List[Link] = []
@@ -227,11 +227,9 @@ class Crawler(Processor):
         return found_links
 
     def finalize(self) -> None:
-        """Finalize processing (no-op for now)."""
         pass
 
     def initiate(self) -> None:
-        """Initiate processing and configure session with OS-aware browser-like headers."""
         system = platform.system()
         if system == "Windows":
             os_info = "Windows NT 10.0; Win64; x64"
