@@ -8,7 +8,6 @@ from typing import List, Optional
 from urllib.parse import urlparse, quote, urlunparse
 from urllib.robotparser import RobotFileParser
 
-import certifi
 import requests
 import urllib3
 from bs4 import BeautifulSoup
@@ -130,23 +129,9 @@ class Crawler(Processor):
         self._respect_crawl_delay(domain)
 
         try:
-            try:
-                verify = certifi.where()
-                response = session.head(url, verify=verify, allow_redirects=True, timeout=10)
-                response.raise_for_status()
-                logger.debug(f'Successfully (status {response.status_code}) fetched header with SSL verification: '
-                             f'{url}')
-            except requests.exceptions.SSLError as ssl_err:
-                logger.warning(f"SSL verification failed for {url}, retrying without verification: {ssl_err}")
-                try:
-                    verify = False
-                    response = session.head(url, verify=verify, timeout=10)
-                    response.raise_for_status()
-                    logger.debug(f"Successfully (status {response.status_code}) fetched header without SSL "
-                                 f"verification: {url}")
-                except requests.exceptions.SSLError as ssl_err:
-                    self.add_error_to_report(link, LinkStatus.OTHER_ERROR, f"SSL fallback also failed: {ssl_err}")
-                    return None
+            response = session.head(url, verify=False, allow_redirects=True, timeout=10)
+            response.raise_for_status()
+            logger.debug(f'Successfully (status {response.status_code}) fetched header: {url}')
 
             if url.startswith("http://") and response.url.startswith("https://"):
                 self.add_error_to_report(link, LinkStatus.HTTP_INSTEAD_OF_HTTPS)
@@ -168,7 +153,7 @@ class Crawler(Processor):
                 logger.debug(f'Depth limit reached for {link.url}')
                 return None
 
-            response = session.get(url, verify=verify)
+            response = session.get(url, verify=False)
             response.raise_for_status()
             logger.debug(f'Page request successful - {response.status_code}')
             return response
@@ -256,9 +241,7 @@ class Crawler(Processor):
         )
 
         session = requests.Session()
-        session.headers.update({
-            "User-Agent": user_agent
-        })
+        session.headers.update({"User-Agent": user_agent})
         self.sessions[threading.current_thread().name] = session
         logger.debug(f'Created session with User-Agent for {system}: {user_agent}')
 
