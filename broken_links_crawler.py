@@ -103,7 +103,7 @@ class BrokenLinksCrawler:
         else:
             msg = (
                 f"Crawling Time: {self.get_time_delta()}  |  "
-                f"Broken URLs + fetch error URLs / Visited URLs / Found URLs: {len(self.broken_links)}+{len(self.other_error_links)}/"
+                f"Broken_URLs+fetch_error_URLs/Visited_URLs/Found_URLs: {len(self.broken_links)}+{len(self.other_error_links)}/"
                 f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
             )
             logger.info(f"{msg}")
@@ -126,7 +126,7 @@ class BrokenLinksCrawler:
         msg = (
             f"{header}"
             f"Crawling Time: {self.get_time_delta()}  |  "
-            f"Broken URLs + fetch error URLs / Visited URLs / Found URLs: {len(self.broken_links)}+{len(self.other_error_links)}/"
+            f"broken+error/visited/found:  {len(self.broken_links)}+{len(self.other_error_links)}/"
             f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
         )
         print(f"\r{msg}", end='', flush=True)
