@@ -145,10 +145,6 @@ class Crawler(Processor):
                 logger.debug(f'{link.url} is outside of {self.target_url}, skipping.')
                 return None
 
-            if self._is_known_non_crawling(url):
-                logger.debug(f'{link.url} is known as non-crawler friendly, skipping.')
-                return None
-
             if link.depth == self.max_depth:
                 logger.debug(f'Depth limit reached for {link.url}')
                 return None
@@ -202,10 +198,18 @@ class Crawler(Processor):
 
         for link_element in soup.find_all("a", href=True):
             url = requests.compat.urljoin(self.target_url, link_element["href"])
+
             if not url.startswith('http'):
                 logger.debug(f'Ignoring {url}')
                 continue
+
             url = normalize_url(url)
+
+            if self._is_known_non_crawling(url):
+                self.add_error_to_report(Link(url, current_link.depth + 1, current_link.url, LinkStatus.OTHER_ERROR,
+                                              ""), LinkStatus.OTHER_ERROR, "non-crawler friendly, skipped")
+                logger.debug(f'{url} is known as non-crawler friendly, skipping.')
+                continue
 
             if url.startswith(f'{current_link.url}#'):
                 logger.debug(f'Section on the same page found: {url}')
