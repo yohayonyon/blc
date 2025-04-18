@@ -20,10 +20,12 @@ from processor import Processor
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
 def retry_if_not_404(exception: Exception) -> bool:
     return isinstance(exception, requests.exceptions.RequestException) and (
         not (hasattr(exception.response, "status_code") and exception.response.status_code == 404)
     )
+
 
 def normalize_url(url: str) -> str:
     parsed = urlparse(url)
@@ -32,11 +34,10 @@ def normalize_url(url: str) -> str:
     query = quote(parsed.query, safe='=&')
     return urlunparse((parsed.scheme, netloc, path, parsed.params, query, parsed.fragment))
 
+
 class Crawler(Processor):
-    def __init__(self, target_url: str, broken_links: List[Link], broken_links_lock: threading.Lock, max_depth: int):
+    def __init__(self, target_url: str, max_depth: int):
         self.target_url = normalize_url(target_url)
-        self.broken_links = broken_links
-        self.broken_links_lock = broken_links_lock
         self.max_depth = max_depth
         self.sessions = dict()
         self.non_crawling_domains = self._load_non_crawling_domains()
@@ -44,6 +45,10 @@ class Crawler(Processor):
         self.crawl_delays = dict()
         self.robots_parsers = dict()
         self.domain_locks = defaultdict(threading.Lock)
+        self.broken_links = []
+        self.broken_links_lock = threading.Lock()
+        self.other_error_links = []
+        self.other_error_links_lock = threading.Lock()
 
     @staticmethod
     def _load_non_crawling_domains():
@@ -106,8 +111,12 @@ class Crawler(Processor):
         link.error = error
         log_fn = logger.error if error_type == LinkStatus.OTHER_ERROR else logger.debug
         log_fn(f'Adding to broken links - {link.url}')
-        with self.broken_links_lock:
-            self.broken_links.append(link)
+        if error_type == LinkStatus.OTHER_ERROR:
+            with self.other_error_links_lock:
+                self.other_error_links.append(link)
+        else:
+            with self.broken_links_lock:
+                self.broken_links.append(link)
 
     @retry(
         stop=stop_after_attempt(4),
@@ -252,3 +261,9 @@ class Crawler(Processor):
         })
         self.sessions[threading.current_thread().name] = session
         logger.debug(f'Created session with User-Agent for {system}: {user_agent}')
+
+    def get_broken_links(self):
+        return self.broken_links
+
+    def get_other_error_links(self):
+        return self.other_error_links

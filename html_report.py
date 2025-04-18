@@ -1,141 +1,62 @@
-import html
-from datetime import datetime
-from typing import Any, List
 
+from datetime import datetime
+from typing import List
+import html
 import tzlocal
 
-from link import Link  # Assuming Link has: url, depth, first_found_on, status, error
-from report import Report  # Adjust if Report is defined elsewhere
+from link import Link
+from report import Report
 
 
 class HtmlReport(Report):
-    """Generates a crawler report in HTML format."""
-
     def generate(
-            self,
-            target_url: str,
-            links: List[Any],
-            execution_time: str,
-            visited_urls_num: int,
-            thread_num: int
+        self,
+        target_url: str,
+        broken_links: List[Link],
+        fetch_error_links: List[Link],
+        execution_time: str,
+        visited_urls_num: int,
+        thread_num: int
     ) -> str:
-        """
-        Generate an HTML report and save it to a file.
-
-        Args:
-            target_url: The site that was crawled.
-            links: List of Link objects.
-            execution_time: Time taken to run the crawler.
-            visited_urls_num: Number of visited URLs.
-            thread_num: Number of threads used.
-        """
         local_time = datetime.now(tzlocal.get_localzone())
-        formatted_time = local_time.strftime('%Y-%m-%d %H:%M:%S %Z%z')
-        return self._build_html(target_url, links, execution_time, visited_urls_num, thread_num, formatted_time)
+        generated_at = local_time.strftime('%Y-%m-%d %H:%M:%S %Z%z')
+        return self._generate_html(target_url, broken_links, fetch_error_links,
+                                   execution_time, visited_urls_num, thread_num, generated_at)
 
     @staticmethod
-    def _build_html(
-            target_url: str,
-            links: List[Link],
-            execution_time: str,
-            visited_urls_num: int,
-            thread_num: int,
-            generated_at: str
-    ) -> str:
-        """Build the full HTML content as a string."""
-        escaped_target_url = html.escape(target_url)
-        target_url_link = f'<a href="{escaped_target_url}" target="_blank" rel="noopener noreferrer">{escaped_target_url}</a>'
+    def _generate_html(target_url, broken_links, fetch_error_links,
+                       execution_time, visited_urls_num, thread_num, generated_at) -> str:
+        def table(title, links, show_status, show_error):
+            header = "<tr><th>#</th><th>URL</th><th>Depth</th><th>Appeared In</th>"
+            if show_status:
+                header += "<th>Status</th>"
+            if show_error:
+                header += "<th>Error</th>"
+            header += "</tr>\n"
 
-        header = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Broken Links Crawler Report</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #f9f9f9;
-        }}
-        h1 {{
-            color: #333;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            table-layout: fixed;
-        }}
-        th, td {{
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-            vertical-align: top;
-            overflow-wrap: break-word;
-        }}
-        th {{
-            background-color: #f2f2f2;
-        }}
-        tr:nth-child(even) {{
-            background-color: #f9f9f9;
-        }}
-        .meta {{
-            margin-bottom: 20px;
-        }}
+            rows = []
+            for i, link in enumerate(links, 1):
+                row = f"<tr><td>{i}</td><td>{link.url}</td><td>{link.depth}</td><td>{link.first_found_on}</td>"
+                if show_status:
+                    row += f"<td>{link.status.name.lower()}</td>"
+                if show_error:
+                    row += f"<td>{link.error}</td>"
+                row += "</tr>"
+                rows.append(row)
 
-        .col-num {{ width: 4ch; }}
-        .col-url {{ max-width: 300px; word-break: break-word; }}
-        .col-depth {{ width: 6ch; }}
-        .col-status {{ width: 21ch; }}
-        .col-error {{ width: 24ch; }}
-    </style>
-</head>
-<body>
-    <h1>Broken Links Crawler Report</h1>
-    <div class="meta">
-        <p><strong>Generated at:</strong> {generated_at}</p>
-        <p><strong>Execution Time:</strong> {execution_time}</p>
-        <p><strong>Target Url:</strong> {target_url_link}</p>
-        <p><strong>Visited URLs:</strong> {visited_urls_num}</p>
-        <p><strong>Broken URLs:</strong> {len(links)}</p>
-        <p><strong>Threads Used:</strong> {thread_num}</p>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th class="col-num">#</th>
-                <th class="col-url">URL</th>
-                <th class="col-depth">Depth</th>
-                <th>Appeared In</th>
-                <th class="col-status">Status</th>
-                <th class="col-error">Error</th>
-            </tr>
-        </thead>
-        <tbody>
-"""
+            return f"<h2>{title}</h2><table border='1'>\n<thead>{header}</thead><tbody>\n" + "\n".join(rows) + "\n</tbody></table>"
 
-        rows = ""
-        for idx, link in enumerate(links, start=1):
-            escaped_url = html.escape(link.url)
-            hyperlink = f'<a href="{escaped_url}" target="_blank" rel="noopener noreferrer">{escaped_url}</a>'
-
-            escaped_appeared_in = html.escape(link.first_found_on)
-            appeared_link = f'<a href="{escaped_appeared_in}" target="_blank" rel="noopener noreferrer">{escaped_appeared_in}</a>'
-
-            rows += f"""<tr>
-                <td class="col-num">{idx}</td>
-                <td class="col-url">{hyperlink}</td>
-                <td class="col-depth">{link.depth}</td>
-                <td>{appeared_link}</td>
-                <td class="col-status">{html.escape(link.status.name.lower())}</td>
-                <td class="col-error">{html.escape(str(link.error))}</td>
-            </tr>
-"""
-
-        footer = """
-        </tbody>
-    </table>
-</body>
-</html>
-"""
-        return header + rows + footer
+        report = f"""<!DOCTYPE html>
+<html><head><meta charset='utf-8'><title>Broken Links Report</title></head><body>
+<h1>Broken Links Crawler Report</h1>
+<p><strong>Generated at:</strong> {generated_at}</p>
+<p><strong>Execution Time:</strong> {execution_time}</p>
+<p><strong>Target URL:</strong> {target_url}</p>
+<p><strong>Visited URLs:</strong> {visited_urls_num}</p>
+<p><strong>Broken URLs:</strong> {len(broken_links)}</p>
+<p><strong>Fetch Error URLs:</strong> {len(fetch_error_links)}</p>
+<p><strong>Threads Used:</strong> {thread_num}</p>
+{table("Broken URLs", broken_links, show_status=True, show_error=False)}
+{table("Fetch Error URLs", fetch_error_links, show_status=False, show_error=True)}
+</body></html>"""
+        return report

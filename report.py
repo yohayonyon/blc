@@ -9,19 +9,10 @@ class Report(ABC):
     def generate(
             self,
             target_url: str,
-            links: list[Any],
+            broken_links: list[Any],
+            other_error_links: list[Any],
             execution_time: str,
             visited_urls_num: int,
             thread_num: int
     ) -> str:
-        """
-        Generate a report and save it to a file.
-
-        Args:
-            target_url: The site that was crawled.
-            links: List of Link objects.
-            execution_time: Time taken to run the crawler.
-            visited_urls_num: Number of visited URLs.
-            thread_num: Number of threads used.
-        """
         pass

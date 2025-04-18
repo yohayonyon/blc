@@ -58,9 +58,9 @@ class BrokenLinksCrawler:
         self.crawlers_num = crawlers_num if crawlers_num != -1 else self.DEFAULT_THREADS_NUM
         self.max_depth = max_depth if max_depth != -1 else float("inf")
 
-        self.broken_links: List[Link] = []
-        self.broken_links_lock = threading.Lock()
-        self.crawler = Crawler(self.target_url, self.broken_links, self.broken_links_lock, self.max_depth)
+        self.crawler = Crawler(self.target_url, self.max_depth)
+        self.broken_links = self.crawler.get_broken_links()
+        self.other_error_links = self.crawler.get_other_error_links()
 
         self.report_types = report_types
         self.report_names = report_names
@@ -92,17 +92,20 @@ class BrokenLinksCrawler:
             self.stop_live_display = True
             display_thread.join()
 
+        self.broken_links = self.crawler.get_broken_links()
+        self.other_error_links = self.crawler.get_other_error_links()
+
         if self.test_mode:
             logger.critical(
                 f"{self.target_url},{self.max_depth},{self.crawlers_num},{self.get_time_delta()},"
-                f"{len(self.broken_links)},{self.crawlers_manager.get_processed_num()},"
+                f"{len(self.broken_links)},{len(self.other_error_links)},{self.crawlers_manager.get_processed_num()},"
                 f"{self.crawlers_manager.get_tasks_num()}")
         else:
             self.generate_reports_and_email()
 
             msg = (
                 f"Execution Time: {self.get_time_delta()}  |  "
-                f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
+                f"Broken URLs + fetch error URLs / Visited URLs / Found URLs: {len(self.broken_links)}+{len(self.other_error_links)}/"
                 f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
             )
             logger.info(f"{msg}")
@@ -124,7 +127,7 @@ class BrokenLinksCrawler:
         msg = (
             f"{header}"
             f"Execution Time: {self.get_time_delta()}  |  "
-            f"Broken URLs/Visited URLs/Found URLs: {len(self.broken_links)}/"
+            f"Broken URLs + fetch error URLs / Visited URLs / Found URLs: {len(self.broken_links)}+{len(self.other_error_links)}/"
             f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
         )
         print(f"\r{msg}", end='', flush=True)
@@ -150,8 +153,8 @@ class BrokenLinksCrawler:
         for report_type, report_name in zip(self.report_types, self.report_names):
             report = ReportFactory.create_report(report_type)
             with open(report_name, "w") as f:
-                report_body = report.generate(self.target_url, self.broken_links, execution_time, visited_urls_num,
-                                              self.crawlers_num)
+                report_body = report.generate(self.target_url, self.broken_links, self.other_error_links, execution_time,
+                                              visited_urls_num, self.crawlers_num)
                 f.write(report_body)
             logger.info(f"Report {report_name} generated.")
 
