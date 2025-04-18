@@ -2,11 +2,9 @@ import json
 import os
 import platform
 import threading
-import time
 from collections import defaultdict
 from typing import List, Optional
 from urllib.parse import urlparse, quote, urlunparse
-from urllib.robotparser import RobotFileParser
 
 import requests
 import urllib3
@@ -68,43 +66,6 @@ class Crawler(Processor):
             logger.debug(f"Error parsing URL in _is_known_non_crawling: {e}")
             return False
 
-    def _get_robots_parser(self, domain: str) -> RobotFileParser:
-        if domain in self.robots_parsers:
-            return self.robots_parsers[domain]
-
-        robots_url = f"https://{domain}/robots.txt"
-        parser = RobotFileParser()
-        parser.set_url(robots_url)
-        try:
-            parser.read()
-            self.robots_parsers[domain] = parser
-        except Exception as e:
-            logger.debug(f"Could not read robots.txt for {domain}: {e}")
-            parser = RobotFileParser()
-            parser.parse("")  # Empty rules (allow all)
-            self.robots_parsers[domain] = parser
-        return parser
-
-    def _get_crawl_delay(self, domain: str) -> float:
-        if domain in self.crawl_delays:
-            return self.crawl_delays[domain]
-
-        parser = self._get_robots_parser(domain)
-        delay = parser.crawl_delay("*")
-        self.crawl_delays[domain] = delay if delay is not None else 0
-        return self.crawl_delays[domain]
-
-    def _respect_crawl_delay(self, domain: str):
-        with self.domain_locks[domain]:
-            delay = self._get_crawl_delay(domain)
-            last_access = self.domain_last_access.get(domain, 0)
-            now = time.time()
-            wait_time = (last_access + delay) - now
-            if wait_time > 0:
-                logger.debug(f"[{domain}] Sleeping {wait_time:.2f}s due to crawl-delay of {delay}s")
-                time.sleep(wait_time)
-            self.domain_last_access[domain] = time.time()
-
     def add_error_to_report(self, link: Link, error_type: LinkStatus, error: str = '') -> None:
         link.status = error_type
         link.error = error
@@ -124,9 +85,6 @@ class Crawler(Processor):
     )
     def fetch_url(self, link: Link, session) -> Optional[requests.Response]:
         url = link.url
-        parsed = urlparse(url)
-        domain = parsed.netloc
-        self._respect_crawl_delay(domain)
 
         try:
             response = session.head(url, verify=False, allow_redirects=True, timeout=10)
@@ -213,7 +171,14 @@ class Crawler(Processor):
 
             if url.startswith(f'{current_link.url}#'):
                 logger.debug(f'Section on the same page found: {url}')
-                found_links.append(Link(url, self.max_depth, current_link.url))
+                parsed = urlparse(url)
+                fragment_id = parsed.fragment
+                if soup.find(id=fragment_id):
+                    logger.debug(f'Fragment {fragment_id} exists on the page.')
+                else:
+                    logger.debug(f'Fragment {fragment_id} does not exist the page.')
+                    self.add_error_to_report(Link(url, current_link.depth + 1, current_link.url),
+                                             LinkStatus.OTHER_ERROR, "Fragment {fragment_id} does not exist the page.")
             elif url.startswith(self.target_url):
                 logger.debug(f'Internal link found: {url}')
                 found_links.append(Link(url, current_link.depth + 1, current_link.url))
@@ -225,7 +190,7 @@ class Crawler(Processor):
         return found_links
 
     def finalize(self) -> None:
-        pass
+        logger.debug('Finalizing')
 
     def initiate(self) -> None:
         system = platform.system()

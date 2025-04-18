@@ -101,14 +101,13 @@ class BrokenLinksCrawler:
                 f"{len(self.broken_links)},{len(self.other_error_links)},{self.crawlers_manager.get_processed_num()},"
                 f"{self.crawlers_manager.get_tasks_num()}")
         else:
-            self.generate_reports_and_email()
-
             msg = (
-                f"Execution Time: {self.get_time_delta()}  |  "
+                f"Crawling Time: {self.get_time_delta()}  |  "
                 f"Broken URLs + fetch error URLs / Visited URLs / Found URLs: {len(self.broken_links)}+{len(self.other_error_links)}/"
                 f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
             )
             logger.info(f"{msg}")
+            self.generate_reports_and_email()
 
     def get_time_delta(self) -> str:
         """
@@ -126,7 +125,7 @@ class BrokenLinksCrawler:
     def print_status(self, header):
         msg = (
             f"{header}"
-            f"Execution Time: {self.get_time_delta()}  |  "
+            f"Crawling Time: {self.get_time_delta()}  |  "
             f"Broken URLs + fetch error URLs / Visited URLs / Found URLs: {len(self.broken_links)}+{len(self.other_error_links)}/"
             f"{self.crawlers_manager.get_processed_num()}/{self.crawlers_manager.get_tasks_num()}"
         )
