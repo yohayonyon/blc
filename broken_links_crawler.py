@@ -37,7 +37,7 @@ class EmailParams:
 
 
 class BrokenLinksCrawler:
-    DEFAULT_THREADS_NUM = 25
+    DEFAULT_THREADS_NUM = 20
 
     def __init__(
         self,
