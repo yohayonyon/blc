@@ -164,8 +164,8 @@ class Crawler(Processor):
             url = normalize_url(url)
 
             if self._is_known_non_crawling(url):
-                self.add_error_to_report(Link(url, current_link.depth + 1, current_link.url, LinkStatus.OTHER_ERROR,
-                                              ""), LinkStatus.OTHER_ERROR, "non-crawler friendly, skipped")
+                # self.add_error_to_report(Link(url, current_link.depth + 1, current_link.url, LinkStatus.OTHER_ERROR,
+                #                               ""), LinkStatus.OTHER_ERROR, "non-crawler friendly, skipped")
                 logger.debug(f'{url} is known as non-crawler friendly, skipping.')
                 continue
 
